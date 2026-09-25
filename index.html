@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FFF7F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#231B18" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="熊熊驿站">
+<meta name="description" content="截图识别取件码，自动归类驿站与快递公司">
+<title>熊熊驿站</title>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
+<link rel="preconnect" href="https://tessdata.projectnaptha.com" crossorigin>
+
+<style>
+/* ============ 熊熊驿站 · 可爱风 Design Tokens ============ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --accent:#FF8FB0; --accent-hi:#FFB3C8; --accent-2:#FFB27A;
+  --accent-soft:rgba(255,143,176,.14); --accent-ring:rgba(255,143,176,.22);
+  --success:#63C58C; --success-soft:rgba(99,197,140,.16);
+  --danger:#FF7A85; --danger-soft:rgba(255,122,133,.14);
+  --brown:#A9765A;
+  --bg:#FFF7F2;
+  --surface:rgba(255,255,255,.86); --surface-2:rgba(255,255,255,.94); --surface-3:#FFFDFB;
+  --sunken:rgba(169,118,90,.07); --sunken-2:rgba(169,118,90,.13);
+  --hairline:rgba(169,118,90,.18); --rim-top:rgba(255,255,255,.9);
+  --rim-in:rgba(169,118,90,.10); --spec:rgba(255,255,255,.6);
+  --tx-1:#4E3B33; --tx-2:#8E7A70; --tx-3:#B6A399; --tx-4:#D9CAC1; --tx-inv:#fff;
+  --r-xs:12px; --r-sm:16px; --r-md:22px; --r-lg:28px; --r-xl:32px; --r-full:999px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px;
+  --sh-1:0 2px 8px rgba(190,130,105,.10);
+  --sh-2:0 6px 18px rgba(190,130,105,.14);
+  --sh-3:0 14px 40px rgba(190,130,105,.22);
+  --ease-out:cubic-bezier(.22,1,.36,1); --ease-spring:cubic-bezier(.34,1.42,.64,1); --ease-io:cubic-bezier(.4,0,.2,1);
+  --t-1:150ms; --t-2:280ms; --t-3:440ms;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#231B18;
+    --surface:rgba(62,50,45,.78); --surface-2:rgba(72,58,52,.9); --surface-3:#332926;
+    --sunken:rgba(255,255,255,.06); --sunken-2:rgba(255,255,255,.11);
+    --hairline:rgba(255,255,255,.14); --rim-top:rgba(255,255,255,.16);
+    --rim-in:rgba(0,0,0,.35); --spec:rgba(255,255,255,.10);
+    --tx-1:#F8EFEA; --tx-2:#C8B4AA; --tx-3:#9E8C82; --tx-4:#7C6C63;
+    --accent-soft:rgba(255,143,176,.18); --accent-ring:rgba(255,143,176,.26);
+  }
+}
+
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:ui-rounded,-apple-system,BlinkMacSystemFont,'SF Pro Rounded','PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif;
+  background:var(--bg);
+  background-image:
+    url("data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><g fill="%23FF8FB0" fill-opacity="0.055"><ellipse cx="36" cy="46" rx="11" ry="9.5"/><ellipse cx="20" cy="32" rx="4.6" ry="5.4" transform="rotate(-18 20 32)"/><ellipse cx="30" cy="25" rx="4.6" ry="5.6"/><ellipse cx="42" cy="25" rx="4.6" ry="5.6"/><ellipse cx="52" cy="32" rx="4.6" ry="5.4" transform="rotate(18 52 32)"/></g></svg>"),
+    radial-gradient(circle at 10% 6%, rgba(255,178,122,.26), transparent 40%),
+    radial-gradient(circle at 90% 2%, rgba(255,143,176,.24), transparent 38%),
+    radial-gradient(circle at 50% 102%, rgba(99,197,140,.16), transparent 44%);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 72px 72px, auto, auto, auto;
+  background-attachment:fixed;
+  min-height:100vh; min-height:100dvh; color:var(--tx-1);
+  padding-bottom:calc(var(--safe-b) + 126px);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  letter-spacing:-.01em; overscroll-behavior-y:contain;
+}
+
+/* ---- 顶部 ---- */
+.hdr{
+  background:rgba(255,247,242,.88);
+  backdrop-filter:blur(18px) saturate(170%); -webkit-backdrop-filter:blur(18px) saturate(170%);
+  padding:calc(var(--safe-t) + 10px) var(--s4) 12px; text-align:center;
+  position:sticky; top:0; z-index:100;
+  border-bottom:2px dashed var(--hairline);
+  transition:background var(--t-2) var(--ease-io), box-shadow var(--t-2) var(--ease-io);
+}
+@media (prefers-color-scheme: dark){ .hdr{ background:rgba(35,27,24,.9); } }
+.hdr.is-scrolled{ background:rgba(255,247,242,.97); box-shadow:var(--sh-2); }
+@media (prefers-color-scheme: dark){ .hdr.is-scrolled{ background:rgba(38,29,26,.97); } }
+
+.hdr > img{
+  display:block; margin:0 auto 8px; width:auto;
+  max-width:min(100%,290px); max-height:138px; object-fit:contain;
+  border-radius:26px; box-shadow:var(--sh-2), inset 0 0 0 3px #fff;
+}
+.hdr-t{ position:relative; }
+.hdr-t::after{
+  content:'\2726'; position:absolute; right:-1px; bottom:-7px;
+  font-size:11px; color:var(--accent); opacity:.75; letter-spacing:.28em;
+}
+.hdr h1{
+  font-size:23px; font-weight:800; letter-spacing:-.02em; line-height:1.2;
+  display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap;
+}
+.hdr h1 > span{
+  background:linear-gradient(135deg,var(--accent) 10%,var(--accent-2) 90%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  font-size:23px; line-height:1.2;
+}
+.hdr h1 img{
+  width:auto; height:34px; border-radius:12px; flex-shrink:0; display:block;
+  box-shadow:var(--sh-1);
+}
+.hdr-r{ position:absolute; right:0; top:50%; transform:translateY(-50%); display:flex; gap:6px; }
+.hdr-r button{
+  width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; border:2px dashed var(--hairline); background:var(--surface);
+  font-size:16px; cursor:pointer; padding:0; line-height:1;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+  touch-action:manipulation;
+}
+.hdr-r button:active{ transform:scale(.88); background:var(--accent-soft); }
+.hdr-r button:focus-visible{ outline:2.5px solid var(--accent); outline-offset:2px; }
+
+/* ---- 搜索 ---- */
+.search-bar{
+  display:none; align-items:center; gap:8px;
+  margin:12px 16px 4px; padding:10px 16px;
+  background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-full);
+}
+.search-bar:focus-within{ border-color:var(--accent); background:var(--surface-2); }
+.search-bar .ic{ font-size:15px; color:var(--tx-3); flex-shrink:0; }
+.search-bar input{
+  flex:1; border:none; background:transparent; font-size:14.5px; color:var(--tx-1);
+  outline:none; font-family:inherit; letter-spacing:-.012em;
+}
+.search-bar input::placeholder{ color:var(--tx-3); }
+.search-bar input::-webkit-search-cancel-button{ display:none; }
+.search-clear{
+  width:26px; height:26px; border-radius:50%; border:none; background:var(--sunken);
+  color:var(--tx-2); display:none; align-items:center; justify-content:center;
+  font-size:11px; cursor:pointer; flex-shrink:0;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.search-clear:active{ transform:scale(.9); background:var(--sunken-2); }
+
+/* ---- 标签 ---- */
+.tabs{
+  display:flex; padding:var(--s3) var(--s4) var(--s2); gap:8px; overflow-x:auto;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch; position:relative; z-index:2;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);
+}
+.tabs::-webkit-scrollbar{ display:none; }
+.tab{
+  padding:8px 17px; border-radius:var(--r-full); border:2px dashed var(--hairline);
+  background:var(--surface); font-size:13.5px; font-weight:700; cursor:pointer; white-space:nowrap;
+  color:var(--tx-2); font-family:inherit; letter-spacing:-.012em; touch-action:manipulation;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), color var(--t-1) var(--ease-out), border-color var(--t-1) var(--ease-out);
+}
+.tab:active{ transform:scale(.93); }
+.tab.on{
+  background:linear-gradient(135deg,var(--accent),var(--accent-hi));
+  color:#fff; border-color:transparent; box-shadow:0 4px 14px rgba(255,143,176,.34);
+}
+
+/* ---- 卡片 ---- */
+.cl{ padding:0 var(--s4); }
+.cd{
+  background:linear-gradient(165deg, rgba(255,255,255,.95), rgba(255,255,255,.72)); border:2px solid rgba(255,255,255,.9);
+  border-radius:var(--r-md); padding:var(--s4) 18px 14px; margin-bottom:10px;
+  box-shadow:inset 5px 0 0 var(--corp,transparent), var(--sh-1);
+  touch-action:manipulation; position:relative; overflow:hidden;
+  transition:transform var(--t-1) var(--ease-out), box-shadow var(--t-2) var(--ease-out), opacity var(--t-2) var(--ease-out);
+  animation:cardIn var(--t-3) var(--ease-out) backwards;
+}
+@keyframes cardIn{ from{opacity:0; transform:translateY(10px) scale(.98)} to{opacity:1; transform:none} }
+.cd::after{
+  content:''; position:absolute; right:-14px; bottom:-16px; width:78px; height:78px;
+  border-radius:50%; background:var(--accent-soft); opacity:.55; pointer-events:none;
+}
+.cd:active{ transform:scale(.978); }
+.cd.picked{ opacity:.5; }
+.cd.sel{ box-shadow:inset 5px 0 0 var(--corp,transparent), 0 0 0 2px var(--accent), var(--sh-2); }
+
+.cd-hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; gap:var(--s2); }
+.cd-corp{ font-size:12px; font-weight:600; color:var(--tx-2); display:flex; align-items:center; gap:7px; min-width:0; }
+.cd-corp .loc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cd-corp .badge{
+  display:inline-flex; align-items:center; padding:3.5px 10px; border-radius:var(--r-full);
+  font-size:11.5px; font-weight:700; flex-shrink:0; background:var(--c,#B58F7D); color:#fff;
+}
+.cd-sta{ font-size:11.5px; color:var(--tx-3); flex-shrink:0; }
+.cd-code{
+  display:inline-block; padding:2px 10px; margin-left:-10px;
+  background:linear-gradient(180deg,transparent 62%,rgba(255,178,122,.35) 62%);
+  border-radius:8px;
+  font-size:31px; font-weight:800; color:var(--tx-1); letter-spacing:-.01em; cursor:pointer;
+  font-feature-settings:"tnum"; font-variant-numeric:tabular-nums; line-height:1.15; word-break:break-all;
+  transition:opacity var(--t-1) var(--ease-out), transform var(--t-1) var(--ease-out);
+}
+.cd-code:active{ opacity:.45; transform:scale(.985); }
+.cd-code.picked{ color:var(--tx-4); text-decoration:line-through; text-decoration-thickness:1.5px; font-weight:600; }
+.cd-ft{ display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:12px; position:relative; z-index:1; }
+.cd-ft button{
+  background:var(--sunken); border:none; font-size:13px; color:var(--tx-2); cursor:pointer;
+  padding:8px 15px; border-radius:var(--r-full); font-weight:700; font-family:inherit;
+  min-height:34px; touch-action:manipulation; letter-spacing:-.012em;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.cd-ft button:active{ transform:scale(.93); background:var(--sunken-2); }
+.cd-ft .del{ color:var(--danger); background:var(--danger-soft); }
+.btn-pk{
+  background:linear-gradient(135deg,#7DD79F,#57BE7F) !important; color:#fff !important;
+  box-shadow:0 3px 10px rgba(99,197,140,.32) !important;
+}
+
+/* ---- 悬浮按钮 ---- */
+.fab-wrap{
+  position:fixed; left:0; right:0; bottom:calc(var(--safe-b) + 16px); z-index:100;
+  display:flex; justify-content:center; padding:0 var(--s4); pointer-events:none;
+  animation:fabIn var(--t-3) var(--ease-spring) backwards; animation-delay:.1s;
+}
+@keyframes fabIn{ from{opacity:0; transform:translateY(22px)} to{opacity:1; transform:none} }
+.fab{
+  pointer-events:auto; display:flex; align-items:center; gap:8px;
+  background:var(--surface-2); border:2px solid rgba(255,255,255,.9);
+  border-radius:var(--r-full); padding:7px; box-shadow:var(--sh-3);
+}
+.fab button{
+  display:flex; align-items:center; gap:6px; border:none; background:var(--sunken);
+  color:var(--tx-1); font-size:14px; font-weight:700; padding:12px 17px; border-radius:var(--r-full);
+  cursor:pointer; font-family:inherit; letter-spacing:-.015em; touch-action:manipulation; min-height:46px;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.fab button:active{ transform:scale(.94); background:var(--sunken-2); }
+.fab button.primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent-hi)); color:#fff;
+  box-shadow:0 4px 14px rgba(255,143,176,.36); padding:12px 21px;
+  animation:glow 2.8s var(--ease-io) infinite;
+}
+@keyframes glow{
+  0%,100%{ box-shadow:0 4px 14px rgba(255,143,176,.36); }
+  50%{ box-shadow:0 4px 22px rgba(255,143,176,.62); }
+}
+.fab button:focus-visible{ outline:2.5px solid var(--accent); outline-offset:2px; }
+.fab .ic{ font-size:17px; line-height:1; }
+
+/* ---- 弹窗 ---- */
+.mo{
+  display:none; position:fixed; inset:0; background:rgba(78,59,51,.34);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  z-index:9999; justify-content:center; align-items:center; animation:fadeIn var(--t-2) var(--ease-io);
+}
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+.mo.show{ display:flex; }
+.mo-c{
+  background:var(--surface-3); border:2px solid rgba(255,255,255,.9);
+  border-radius:var(--r-xl); padding:var(--s6) var(--s5) var(--s5);
+  width:88%; max-width:400px; max-height:85vh; max-height:85dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  box-shadow:var(--sh-3); position:relative; animation:sheetUp var(--t-3) var(--ease-spring);
+}
+@keyframes sheetUp{ from{opacity:0; transform:translateY(28px) scale(.94)} to{opacity:1; transform:none} }
+.mo-c h2{ margin-bottom:18px; font-size:20px; font-weight:800; letter-spacing:-.02em; color:var(--tx-1); }
+.mo-c label{ font-size:11.5px; color:var(--tx-2); margin-bottom:7px; display:block; font-weight:700; letter-spacing:.04em; }
+.mo-c input,.mo-c textarea{
+  width:100%; padding:13px 15px; border:2px dashed var(--hairline); border-radius:var(--r-sm);
+  font-size:15.5px; margin-bottom:15px; background:var(--surface); outline:none;
+  font-family:inherit; letter-spacing:-.015em; color:var(--tx-1);
+  transition:border-color var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.mo-c input::placeholder,.mo-c textarea::placeholder{ color:var(--tx-4); }
+.mo-c input:focus,.mo-c textarea:focus{ border-color:var(--accent); background:var(--surface-2); }
+.mo-btns{ display:flex; gap:10px; margin-top:6px; }
+.mo-btns button{
+  flex:1; padding:14px; border-radius:var(--r-sm); border:none; font-size:16px; font-weight:800;
+  font-family:inherit; touch-action:manipulation; letter-spacing:-.015em; min-height:50px; cursor:pointer;
+  transition:transform var(--t-1) var(--ease-out);
+}
+.mo-btns button:active{ transform:scale(.965); }
+.bc{ background:var(--sunken); color:var(--tx-1); }
+.bs{ background:linear-gradient(135deg,var(--accent),var(--accent-hi)); color:#fff; box-shadow:0 4px 14px rgba(255,143,176,.32); }
+.bs.danger{ background:linear-gradient(135deg,#FF8A93,var(--danger)); box-shadow:0 4px 14px rgba(255,122,133,.32); }
+
+/* ---- 空状态 ---- */
+.empty{ text-align:center; padding:64px var(--s5) var(--s8); animation:fadeIn var(--t-3) var(--ease-out); }
+.empty-ring{
+  width:92px; height:92px; margin:0 auto var(--s4); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:42px;
+  background:var(--surface); border:2px dashed var(--hairline); box-shadow:var(--sh-1);
+}
+@keyframes floaty{ 0%,100%{ transform:translateY(0) rotate(0deg);} 50%{ transform:translateY(-7px) rotate(-3deg);} }
+.empty-ring{ animation:floaty 3.4s var(--ease-io) infinite; }
+.empty-t{ font-size:17px; font-weight:800; color:var(--tx-1); letter-spacing:-.018em; margin-bottom:6px; }
+.empty-s{ font-size:13.5px; color:var(--tx-3); line-height:1.55; margin-bottom:var(--s5); }
+.empty-act{
+  display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,var(--accent),var(--accent-hi));
+  color:#fff; border:none; border-radius:var(--r-full); padding:13px 26px; font-size:15px; font-weight:800;
+  font-family:inherit; cursor:pointer; min-height:46px; touch-action:manipulation;
+  box-shadow:0 5px 16px rgba(255,143,176,.34);
+  transition:transform var(--t-1) var(--ease-out);
+}
+.empty-act:active{ transform:scale(.95); }
+
+/* ---- OCR 进度 ---- */
+.ocr-load{
+  display:none; margin:12px var(--s4); background:var(--surface);
+  border:2px dashed var(--hairline); border-radius:var(--r-md);
+  padding:var(--s8) var(--s5) var(--s6); text-align:center;
+}
+.ocr-load.show{ display:block; animation:fadeIn var(--t-2) var(--ease-io); }
+.sp{
+  display:inline-block; width:32px; height:32px; border-radius:50%;
+  border:3px solid var(--accent-soft); border-top-color:var(--accent); animation:spin .72s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg) } }
+.ocr-load .st{ margin-top:13px; font-size:13.5px; color:var(--tx-2); font-weight:700; }
+.ocr-cancel{
+  margin-top:14px; padding:9px 24px; border:none; border-radius:var(--r-full);
+  background:var(--sunken); color:var(--tx-2); font-size:13.5px; cursor:pointer; font-weight:700;
+  font-family:inherit; min-height:36px; transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.ocr-cancel:active{ background:var(--sunken-2); transform:scale(.95); }
+
+/* ---- 统计 ---- */
+.sgrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
+.sc{
+  background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-md);
+  padding:18px var(--s4); text-align:center;
+}
+.sc .n{
+  font-size:32px; font-weight:800; letter-spacing:-.03em; line-height:1.1; font-feature-settings:"tnum";
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.sc .l{ font-size:11.5px; color:var(--tx-2); margin-top:5px; font-weight:700; letter-spacing:.03em; }
+.sec-t{ font-size:12px; color:var(--tx-2); font-weight:800; margin:var(--s5) 0 var(--s2); letter-spacing:.04em; }
+.rk{ background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-md); padding:2px var(--s4); }
+.rk-row{
+  display:flex; justify-content:space-between; align-items:center; padding:11px 0;
+  border-bottom:2px dashed var(--hairline); font-size:14.5px;
+}
+.rk-row:last-child{ border-bottom:none; }
+.rk-row .nm{ color:var(--tx-1); font-weight:600; }
+.rk-row .ct{ font-weight:800; color:var(--accent); font-feature-settings:"tnum"; }
+.btn-cl{
+  width:100%; padding:13px; border:none; border-radius:var(--r-sm); font-size:14.5px;
+  color:var(--danger); background:var(--danger-soft); cursor:pointer; margin-top:var(--s3);
+  font-weight:700; font-family:inherit; touch-action:manipulation; min-height:46px;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.btn-cl:active{ background:rgba(255,122,133,.2); transform:scale(.98); }
+
+/* ---- 确认框 ---- */
+.confirm-c{ max-width:330px; padding:var(--s6) var(--s5) var(--s5); text-align:center; }
+.confirm-c h2{ margin-bottom:10px; }
+.cf-msg{ font-size:14.5px; color:var(--tx-2); line-height:1.55; margin-bottom:var(--s5); word-break:break-word; }
+.cf-msg b{ color:var(--tx-1); font-weight:800; }
+textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
+.field-hint{ font-size:11.5px; color:var(--tx-3); margin:-9px 0 14px; line-height:1.45; }
+.raw-box{
+  background:var(--sunken); border-radius:var(--r-sm); padding:12px 13px; font-size:12.5px;
+  line-height:1.6; color:var(--tx-2); max-height:190px; overflow-y:auto; text-align:left;
+  margin-bottom:var(--s4); font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre-wrap; word-break:break-word; -webkit-user-select:text; user-select:text;
+}
+
+/* ---- 选择器 ---- */
+.sp-row{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
+.sp-btn{
+  padding:8px 14px; border-radius:var(--r-full); border:2px dashed var(--hairline);
+  background:var(--surface); font-size:12.5px; cursor:pointer; touch-action:manipulation;
+  color:var(--tx-2); font-weight:700; font-family:inherit; min-height:34px;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), color var(--t-1) var(--ease-out);
+}
+.sp-btn:active{ transform:scale(.93); background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+.crp-row{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
+.crp-btn{
+  padding:9px 16px; border-radius:var(--r-full); border:2px dashed var(--hairline);
+  background:var(--surface); cursor:pointer; touch-action:manipulation; min-height:38px;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), border-color var(--t-1) var(--ease-out);
+}
+.crp-btn:active{ transform:scale(.93); }
+.crp-btn.on{ background:linear-gradient(135deg,var(--accent),var(--accent-hi)); border-color:transparent; box-shadow:0 4px 12px rgba(255,143,176,.3); }
+.crp-t{ font-size:13.5px; color:var(--tx-2); font-weight:700; }
+.crp-t.on{ color:#fff; }
+
+/* ---- Toast ---- */
+.toast{
+  position:fixed; top:calc(var(--safe-t) + 12px); left:50%; transform:translateX(-50%);
+  background:rgba(94,72,62,.94); color:#fff; padding:12px 22px; border-radius:var(--r-full);
+  font-size:14.5px; font-weight:700; z-index:99999; pointer-events:none; max-width:82vw;
+  text-align:center; box-shadow:0 8px 26px rgba(94,72,62,.28);
+  animation:toastIn var(--t-2) var(--ease-spring), toastOut var(--t-2) var(--ease-io) 1.4s forwards;
+}
+@keyframes toastIn{ from{opacity:0; transform:translateX(-50%) translateY(-16px) scale(.9)} to{opacity:1; transform:translateX(-50%) translateY(0) scale(1)} }
+@keyframes toastOut{ to{opacity:0; transform:translateX(-50%) translateY(-10px) scale(.94)} }
+
+/* ---- 勾选 ---- */
+.chk{
+  width:24px; height:24px; border-radius:50%; border:2px dashed var(--tx-4);
+  display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer;
+  flex-shrink:0; color:transparent; background:var(--surface);
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), border-color var(--t-1) var(--ease-out);
+}
+.chk.on{ background:var(--accent); border-color:var(--accent); border-style:solid; color:#fff; box-shadow:0 3px 10px rgba(255,143,176,.32); }
+
+/* ---- 批量条 ---- */
+.batch-bar{
+  display:none; position:fixed; left:0; right:0; bottom:calc(var(--safe-b) + 16px); z-index:101;
+  padding:0 var(--s4); pointer-events:none;
+}
+.batch-bar.show{ display:flex; align-items:center; gap:8px; justify-content:center; animation:fabIn var(--t-2) var(--ease-spring); }
+.batch-inner{
+  pointer-events:auto; display:flex; align-items:center; gap:8px; background:var(--surface-2);
+  border:2px solid rgba(255,255,255,.9); border-radius:var(--r-full); padding:7px 7px 7px 18px;
+  box-shadow:var(--sh-3); max-width:100%;
+}
+.batch-bar .cnt{ font-size:14px; font-weight:800; color:var(--tx-1); flex-shrink:0; font-feature-settings:"tnum"; }
+.batch-bar .abtn{
+  padding:10px 16px; border-radius:var(--r-full); border:none; font-size:13px; font-weight:800;
+  cursor:pointer; touch-action:manipulation; font-family:inherit; min-height:38px; white-space:nowrap;
+  transition:transform var(--t-1) var(--ease-out);
+}
+.abtn-green{ background:linear-gradient(135deg,#7DD79F,#57BE7F); color:#fff; }
+.abtn-red{ background:linear-gradient(135deg,#FF8A93,var(--danger)); color:#fff; }
+.abtn-gray{ background:var(--sunken); color:var(--tx-1); }
+.batch-bar .abtn:active{ transform:scale(.94); }
+
+/* ---- OCR 结果面板 ---- */
+.ocr-sheet{
+  width:88%; max-width:400px; max-height:80vh; max-height:80dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--surface-3);
+  border:2px solid rgba(255,255,255,.9); border-radius:var(--r-xl); padding:var(--s5);
+  box-shadow:var(--sh-3); animation:sheetUp var(--t-3) var(--ease-spring);
+}
+.ocr-hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--s3); }
+.ocr-hd h3{ font-size:17px; font-weight:800; letter-spacing:-.02em; color:var(--tx-1); }
+.ocr-done{ font-size:14.5px; color:var(--accent); cursor:pointer; font-weight:800; padding:4px 2px; }
+.ocr-item{
+  display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px;
+  background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-md); margin-bottom:8px;
+}
+.ocr-item:last-child{ margin-bottom:0; }
+.ocr-code{ font-size:18px; font-weight:800; color:var(--tx-1); font-feature-settings:"tnum"; word-break:break-all; }
+.ocr-meta{ font-size:12px; color:var(--tx-3); margin-top:3px; }
+.ocr-add{
+  background:linear-gradient(135deg,var(--accent),var(--accent-hi)); color:#fff; border:none;
+  border-radius:var(--r-full); padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer;
+  font-family:inherit; flex-shrink:0; min-height:36px; touch-action:manipulation;
+  box-shadow:0 3px 10px rgba(255,143,176,.28);
+  transition:transform var(--t-1) var(--ease-out);
+}
+.ocr-add:active{ transform:scale(.93); }
+.ocr-add.done{ background:linear-gradient(135deg,#7DD79F,#57BE7F); }
+
+/* ---- 设置 ---- */
+.set-btn{
+  width:100%; padding:13px; border:none; border-radius:var(--r-sm); font-size:14.5px;
+  font-family:inherit; cursor:pointer; min-height:46px; touch-action:manipulation;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+}
+.set-btn:active{ transform:scale(.98); }
+.set-btn.ghost{
+  color:var(--accent); background:var(--accent-soft); border:2px dashed var(--accent-ring);
+  font-weight:700; margin-bottom:14px;
+}
+.set-btn.solid{
+  color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent-hi)); font-weight:800;
+  margin-top:7px; margin-bottom:14px; box-shadow:0 4px 14px rgba(255,143,176,.3);
+}
+.hint{ font-size:11.5px; color:var(--tx-3); margin-top:-6px; margin-bottom:14px; line-height:1.45; }
+.set-ta{
+  width:100%; padding:13px 15px; border:2px dashed var(--hairline); border-radius:var(--r-sm);
+  font-size:14px; background:var(--surface); outline:none; font-family:inherit; color:var(--tx-1);
+  resize:vertical; letter-spacing:-.012em; margin-bottom:6px;
+}
+.set-ta:focus{ border-color:var(--accent); background:var(--surface-2); }
+.set-ta.mono{ font-size:12.5px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+
+@media (display-mode: standalone){
+  .hdr{ padding-top:calc(var(--safe-t) + 6px); }
+  .fab-wrap,.batch-bar{ bottom:calc(var(--safe-b) + 22px); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+
+<div class="hdr">
+  <img src="header.png" alt="" onerror="this.style.display='none'">
+  <div class="hdr-t">
+    <h1><img src="bear1.png" alt=""><span>熊熊驿站</span><img src="bear2.png" alt=""></h1>
+    <div class="hdr-r">
+      <button onclick="openStats()" aria-label="数据概览">📊</button>
+      <button onclick="openSettings()" aria-label="设置">⚙️</button>
+    </div>
+  </div>
+</div>
+
+<div id="listV">
+  <input type="file" id="fi" accept="image/*" onchange="handleFile(event)" style="display:none">
+  <div class="search-bar" id="searchBar">
+    <span class="ic">🔍</span>
+    <input type="search" id="searchInput" placeholder="搜索取件码 / 驿站 / 公司" oninput="onSearch()">
+    <button class="search-clear" onclick="clearSearch()" aria-label="清除">✕</button>
+  </div>
+  <div class="ocr-load" id="ocrLoad">
+    <div class="sp"></div>
+    <div class="st" id="ocrSt">加载中...</div>
+    <button class="ocr-cancel" onclick="cancelOCR()">取消</button>
+  </div>
+  <div class="tabs" id="staTabs"></div>
+  <div class="cl" id="cardList"></div>
+</div>
+
+<div class="batch-bar" id="batchBar">
+  <div class="batch-inner">
+    <span class="cnt" id="batchCnt">已选 0 项</span>
+    <button class="abtn abtn-green" onclick="batchPickup()">已取</button>
+    <button class="abtn abtn-red" onclick="batchDelete()">删除</button>
+    <button class="abtn abtn-gray" onclick="exitSelectMode()">取消</button>
+  </div>
+</div>
+
+<div class="fab-wrap" id="fabWrap">
+  <div class="fab">
+    <button onclick="openModal()"><span class="ic">✏️</span>手动添加</button>
+    <button class="primary" onclick="document.getElementById('fi').click()"><span class="ic">📸</span>截图识别</button>
+  </div>
+</div>
+
+<div class="mo" id="modal">
+  <div class="mo-c">
+    <h2 id="mTitle">添加快递</h2>
+    <label>取件码</label>
+    <textarea id="iCode" class="code-input" rows="2" placeholder="例如：307-1-1009"></textarea>
+    <div class="field-hint">也可直接粘贴整段短信或文案，会自动提取其中的取件码</div>
+    <label>快递公司</label>
+    <div class="crp-row" id="crpRow"></div>
+    <label>驿站</label>
+    <div class="sp-row" id="staPick"></div>
+    <input type="text" id="iStation" placeholder="或手动输入驿站名">
+    <div class="mo-btns"><button class="bc" onclick="closeModal()">取消</button><button class="bs" onclick="saveItem()">保存</button></div>
+  </div>
+</div>
+
+<div class="mo" id="statsMo">
+  <div class="mo-c">
+    <h2>数据概览</h2>
+    <div id="statsCt"></div>
+    <button class="btn-cl" onclick="cleanupPicked()">清理已取</button>
+    <div class="mo-btns" style="margin-top:10px"><button class="bc" onclick="closeStats()">关闭</button></div>
+  </div>
+</div>
+
+<div class="mo" id="setMo">
+  <div class="mo-c">
+    <h2>设置</h2>
+    <label>驿站列表（每行一个）</label>
+    <textarea id="iStas" class="set-ta" rows="5" placeholder="北门美食广场&#10;1栋快递服务中心&#10;食堂快递点"></textarea>
+    <div class="hint">可增删改，用于快捷选择和自动识别</div>
+    <button class="set-btn ghost" onclick="exportData()">导出数据</button>
+    <label>导入数据</label>
+    <textarea id="iImport" class="set-ta mono" rows="2" placeholder="粘贴导出的数据..."></textarea>
+    <button class="set-btn solid" onclick="importData()">导入</button>
+    <div class="mo-btns"><button class="bc" onclick="closeSettings()">取消</button><button class="bs" onclick="saveSettings()">保存</button></div>
+  </div>
+</div>
+
+<div class="mo" id="confirmMo">
+  <div class="mo-c confirm-c">
+    <h2 id="cfTitle">确认操作</h2>
+    <div class="cf-msg" id="cfMsg"></div>
+    <div class="mo-btns">
+      <button class="bc" onclick="closeConfirm()">取消</button>
+      <button class="bs danger" id="cfOk" onclick="confirmYes()">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CR={极兔:'#FF8C00',圆通:'#4169E1',中通:'#DC143C',韵达:'#8B4513',申通:'#DAA520',顺丰:'#2F4F4F',京东:'#DC143C',邮政EMS:'#228B22',德邦:'#4169E1',其他:'#BC8F8F'};
+const COURIERS=['极兔','圆通','中通','韵达','申通','顺丰','京东','邮政EMS','德邦','其他'];
+
+let items=JSON.parse(localStorage.getItem('puItems')||'[]');
+/* 默认驿站：北门美食广场 / 理工大学桂轩快递站 / 1栋 / 食堂 / 沙宣 */
+const DEFAULT_STATIONS=["北门美食广场","理工大学桂轩快递站","1栋","食堂","沙宣"];
+let stations=JSON.parse(localStorage.getItem('puStas')||JSON.stringify(DEFAULT_STATIONS));
+let curTab='全部',editId=null,worker=null,curC='';
+let selectMode=false,selected=new Set();
+let searchQ='';
+
+/* 默认驿站同步（单一入口，替代原先的 pruneLegacy + migrate 两段）：
+   1. 移除已废弃的预置项——仅当该项名下无快递数据时移除，保护已有数据；
+   2. 补齐当前 DEFAULT_STATIONS 中缺失的默认项。
+   这样老用户的旧默认项能平滑迁移到新默认，用户自定义（OCR 识别）的驿站始终保留。 */
+(function syncDefaultStations(){
+  const DEPRECATED=["1栋快递服务中心","食堂快递点","桂轩快递站","鸿欣超市","2栋快递服务中心","3栋快递服务中心","东门快递点","西门快递点","南门快递点"];
+  let changed=false;
+  const before=stations.length;
+  stations=stations.filter(s=>DEPRECATED.indexOf(s)<0 || items.some(i=>i.station===s));
+  if(stations.length!==before) changed=true;
+  DEFAULT_STATIONS.forEach(d=>{ if(d && stations.indexOf(d)<0){ stations.push(d); changed=true; } });
+  if(changed) saveStas();
+})();
+
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}
+function save(){localStorage.setItem('puItems',JSON.stringify(items));}
+function saveStas(){localStorage.setItem('puStas',JSON.stringify(stations));}
+
+/* 相对时间 */
+function relTime(ts){
+  const d=Date.now()-ts;
+  if(d<60000)return '刚刚';
+  if(d<3600000)return Math.floor(d/60000)+' 分钟前';
+  if(d<86400000)return Math.floor(d/3600000)+' 小时前';
+  if(d<604800000)return Math.floor(d/86400000)+' 天前';
+  const t=new Date(ts);
+  return (t.getMonth()+1)+'/'+t.getDate();
+}
+function timeLabel(i){ return i.ts?relTime(i.ts):(i.time||''); }
+
+function renderStaTabs(){
+  const used=new Set(items.map(i=>i.station).filter(Boolean));
+  const tabs=['全部',...stations.filter(s=>used.has(s))];
+  document.getElementById('staTabs').innerHTML=tabs.map(s=>`<button class="tab${curTab===s?' on':''}" onclick="setStTab('${s.replace(/'/g,"\\'")}')">${s}</button>`).join('');
+}
+function setStTab(t){curTab=t;renderCards();}
+
+function onSearch(){
+  const el=document.getElementById('searchInput');
+  searchQ=(el?el.value:'').trim().toLowerCase();
+  document.querySelector('.search-clear').style.display=searchQ?'flex':'none';
+  renderCards();
+}
+function clearSearch(){searchQ='';const el=document.getElementById('searchInput');if(el)el.value='';renderCards();}
+
+function renderCrpRow(){
+  document.getElementById('crpRow').innerHTML=COURIERS.map(c=>`<div class="crp-btn${curC===c?' on':''}" onclick="setCrp('${c}')"><span class="crp-t${curC===c?' on':''}">${c}</span></div>`).join('');
+}
+function setCrp(c){curC=curC===c?'':c;renderCrpRow();}
+
+function renderStPick(){
+  document.getElementById('staPick').innerHTML=stations.map(s=>`<div class="sp-btn" onclick="document.getElementById('iStation').value='${s.replace(/'/g,"\\'")}'">${s}</div>`).join('');
+}
+
+function openModal(id){
+  editId=id||null;renderCrpRow();renderStPick();
+  if(editId){
+    const it=items.find(i=>i.id===id);
+    if(!it)return;
+    document.getElementById('mTitle').textContent='编辑快递';
+    document.getElementById('iCode').value=it.code;
+    curC=it.courier||'';
+    document.getElementById('iStation').value=it.station||'';
+  }else{
+    document.getElementById('mTitle').textContent='添加快递';
+    document.getElementById('iCode').value='';curC='';document.getElementById('iStation').value='';
+  }
+  renderCrpRow();
+  document.getElementById('modal').classList.add('show');
+  if(!editId)setTimeout(()=>document.getElementById('iCode').focus(),260);
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+function saveItem(){
+  const raw=(document.getElementById('iCode').value||'').trim();
+  const station=document.getElementById('iStation').value.trim();
+  if(!raw)return toast('请输入取件码');
+
+  if(editId){
+    const it=items.find(i=>i.id===editId);
+    if(it){it.code=normalizeCode(raw)||raw;it.courier=curC;it.station=station;}
+    save();closeModal();renderCards();toast('已更新');
+    return;
+  }
+
+  /* 粘贴整段文本时自动批量提取 */
+  const picked=parseText(raw);
+
+  const doSave=()=>{
+    if(picked.length>1){
+      /* 逆序 unshift，保证列表顺序与原文一致（新记录在前） */
+      for(let i=picked.length-1;i>=0;i--){
+        const p=picked[i];
+        items.unshift({id:newId(),ts:Date.now(),code:p.code,courier:curC||p.courier||'',station:station||p.station||'',time:new Date().toLocaleString('zh-CN'),pickedUp:false});
+      }
+      save();closeModal();renderCards();toast('已添加 '+picked.length+' 个取件码');
+      return;
+    }
+    const single=picked.length===1?picked[0]:null;
+    const code=single?single.code:(normalizeCode(raw)||raw);
+    items.unshift({
+      id:newId(),ts:Date.now(),code:code,
+      courier:curC||(single?single.courier:'')||'',
+      station:station||(single?single.station:'')||'',
+      time:new Date().toLocaleString('zh-CN'),pickedUp:false
+    });
+    save();closeModal();renderCards();toast('已添加');
+  };
+
+  /* 用户未手动指定驿站时，先确认识别到的新驿站是否入库 */
+  const news=collectNewStations(picked);
+  if(news.length && !station){ confirmStations(news,doSave); return; }
+  doSave();
+}
+
+function togglePicked(id){
+  const it=items.find(i=>i.id===id);if(!it)return;
+  it.pickedUp=!it.pickedUp;
+  it.pickedUpTime=it.pickedUp?new Date().toLocaleString('zh-CN'):null;
+  save();renderCards();toast(it.pickedUp?'已标记取件':'已取消');
+}
+
+/* ---- 自定义确认弹窗：替代原生 confirm（在 iframe / 内置浏览器中会被静默禁用） ---- */
+let cfCb=null;
+function askConfirm(msg,onOk,okText,title){
+  document.getElementById('cfTitle').textContent=title||'确认操作';
+  document.getElementById('cfMsg').innerHTML=msg;
+  document.getElementById('cfOk').textContent=okText||'确定';
+  cfCb=onOk;
+  document.getElementById('confirmMo').classList.add('show');
+}
+function closeConfirm(){document.getElementById('confirmMo').classList.remove('show');cfCb=null;}
+function confirmYes(){const cb=cfCb;closeConfirm();if(typeof cb==='function')cb();}
+
+function deleteItem(id){
+  const it=items.find(i=>i.id===id);
+  if(!it)return;
+  askConfirm('确定删除取件码 <b>'+esc(it.code)+'</b> 吗？此操作不可撤销。',function(){
+    items=items.filter(i=>i.id!==id);save();renderCards();toast('已删除');
+  },'删除');
+}
+function copyCode(c){
+  navigator.clipboard.writeText(c).then(()=>{
+    toast('已复制 '+c);
+    if(navigator.vibrate) navigator.vibrate(10);
+  }).catch(()=>toast('复制失败'));
+}
+
+function cleanupPicked(){
+  const n=items.filter(i=>i.pickedUp).length;
+  if(!n)return toast('没有已取快递');
+  askConfirm('将永久删除 <b>'+n+'</b> 条已取记录，无法恢复。',function(){
+    items=items.filter(i=>!i.pickedUp);save();closeStats();renderCards();toast('已清理 '+n+' 条');
+  },'清理');
+}
+
+function toggleSelectMode(){
+  selectMode=!selectMode;
+  selected.clear();
+  document.getElementById('batchBar').classList.toggle('show',selectMode);
+  document.getElementById('fabWrap').style.display=selectMode?'none':'flex';
+  renderCards(true);
+}
+function exitSelectMode(){
+  selectMode=false;selected.clear();
+  document.getElementById('batchBar').classList.remove('show');
+  document.getElementById('fabWrap').style.display='flex';
+  renderCards();
+}
+function toggleSel(id){if(selected.has(id))selected.delete(id);else selected.add(id);document.getElementById('batchCnt').textContent='已选 '+selected.size+' 项';renderCards(true);}
+function batchPickup(){
+  if(!selected.size)return toast('请先选择快递');
+  items.forEach(i=>{if(selected.has(i.id)){i.pickedUp=true;i.pickedUpTime=new Date().toLocaleString('zh-CN');}});
+  save();exitSelectMode();renderCards();toast('已批量标记取件');
+}
+function batchDelete(){
+  if(!selected.size)return toast('请先选择快递');
+  const n=selected.size;
+  askConfirm('将永久删除选中的 <b>'+n+'</b> 条记录，无法恢复。',function(){
+    items=items.filter(i=>!selected.has(i.id));save();exitSelectMode();renderCards();toast('已删除 '+n+' 条');
+  },'删除');
+}
+
+function renderCards(noAnim){
+  /* 控制搜索栏显隐 */
+  const sb=document.getElementById('searchBar');
+  if(sb) sb.style.display=items.length?'flex':'none';
+
+  let f=items;
+  if(curTab!=='全部') f=f.filter(i=>i.station===curTab);
+  if(searchQ){
+    const q=searchQ.toLowerCase();
+    f=f.filter(i=>(i.code+i.courier+i.station).toLowerCase().includes(q));
+  }
+  /* 排序：未取优先，同状态下新的在前 */
+  f=f.slice().sort((a,b)=>{
+    if(a.pickedUp!==b.pickedUp) return a.pickedUp?1:-1;
+    return (b.ts||b.id)-(a.ts||a.id);
+  });
+
+  renderStaTabs();
+  const el=document.getElementById('cardList');
+  if(!f.length){
+    let html='';
+    if(searchQ){
+      html='<div class="empty"><div class="empty-ring">🔍</div><div class="empty-t">没有匹配的快递</div><div class="empty-s">换个关键词试试</div></div>';
+    }else if(items.length){
+      html='<div class="empty"><div class="empty-ring">📭</div><div class="empty-t">该驿站暂无快递</div><div class="empty-s">切换上方标签或搜索其他内容</div></div>';
+    }else{
+      html='<div class="empty"><div class="empty-ring">📦</div><div class="empty-t">还没有快递</div><div class="empty-s">截图识别取件码，或手动录入<br>包裹信息会自动归类和排序</div><button class="empty-act" onclick="document.getElementById(\'fi\').click()">📸 开始识别</button></div>';
+    }
+    el.innerHTML=html;
+    return;
+  }
+  el.innerHTML=f.map((i,n)=>{
+    const color=CR[i.courier]||'#BC8F8F';
+    const sel=selected.has(i.id);
+    return `<div class="cd${i.pickedUp?' picked':''}${sel?' sel':''}" style="--corp:${color};${noAnim?'animation:none':'animation-delay:'+Math.min(n,12)*20+'ms'}" ${selectMode?`onclick="toggleSel(${i.id})"`:''}><div class="cd-hd">${selectMode?`<div class="chk${sel?' on':''}">${sel?'✓':''}</div>`:''}<span class="cd-corp"><span class="badge" style="--c:${color}">${i.courier||'快递'}</span><span class="loc">📍 ${i.station||'未指定驿站'}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="${selectMode?`toggleSel(${i.id})`:`copyCode('${i.code}')`}">${i.code}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
+  }).join('');
+}
+
+/* 全角转半角：Tesseract 在 chi_sim 模式下偶尔把数字/字母识别成全角，
+   会让 [A-Za-z0-9] 这类正则整条失配，必须在解析前统一。 */
+function unifyWidth(s){
+  return String(s==null?'':s)
+    .replace(/[\uFF01-\uFF5E]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/\u3000/g,' ');
+}
+
+function cleanCJK(s){
+  let r=unifyWidth(s);
+  for(let i=0;i<8;i++){
+    const n=r.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g,'$1$2')
+             .replace(/([\dA-Za-z])\s+([\u4e00-\u9fff])/g,'$1$2')
+             .replace(/([\u4e00-\u9fff])\s+([\dA-Za-z])/g,'$1$2');
+    if(n===r)break;
+    r=n;
+  }
+  return r;
+}
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* 保证 id 全局唯一：循环中同毫秒会产生重复 id，导致删除时误删多条 */
+let lastId=0;
+function newId(){ lastId=Math.max(Date.now(),lastId+1); return lastId; }
+
+/* 快递公司词典：具体承运商优先；OCR 常见错字一并收录 */
+const CM_MAIN=[['极兔','极兔'],['极免','极兔'],['圆通','圆通'],['圆通','圆通'],['中通','中通'],['中通','中通'],['韵达','韵达'],['韵达','韵达'],['申通','申通'],['申通','申通'],['顺丰','顺丰'],['京东','京东'],['京东','京东'],['邮政EMS','邮政EMS'],['邮政','邮政EMS'],['EMS','邮政EMS'],['德邦','德邦']];
+function matchCourier(text){
+  if(!text)return'';
+  for(const[k,v]of CM_MAIN)if(text.includes(k))return v;
+  return'';
+}
+
+function normalizeStationName(t){
+  return String(t).replace(/[\s\u3000]/g,'').replace(/[（(）)。.,，、:：;；\-—'"“”]/g,'');
+}
+
+/* 精确匹配：文本中直接包含驿站名（去标点后再比一次） */
+function matchStationExact(text){
+  if(!text||!stations||!stations.length)return'';
+  for(const s of stations){if(s&&text.includes(s))return s;}
+  const ft=normalizeStationName(text);
+  for(const s of stations){const fs=normalizeStationName(s);if(fs&&ft.includes(fs))return s;}
+  return '';
+}
+
+/* 编辑距离：更准确地容忍 OCR 单个错字，同时避免长串通用词重合误判 */
+function levenshtein(a,b){
+  const m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+  const dp=Array(n+1).fill(0);for(let i=0;i<=n;i++)dp[i]=i;
+  for(let i=1;i<=m;i++){
+    let prev=dp[0];dp[0]=i;
+    for(let j=1;j<=n;j++){
+      const temp=dp[j];
+      if(a[i-1]===b[j-1])dp[j]=prev;
+      else dp[j]=Math.min(prev+1,dp[j]+1,dp[j-1]+1);
+      prev=temp;
+    }
+  }
+  return dp[n];
+}
+
+/* 模糊匹配：基于编辑距离相似度，避免"财经学院1栋旁快递服务中心"被误判为"1栋快递服务中心" */
+function matchStationFuzzy(text){
+  if(!text||!stations||!stations.length)return'';
+  const ft=normalizeStationName(text);
+  if(!ft)return'';
+  let best='',bestScore=0;
+  for(const s of stations){
+    if(!s||s.length<3)continue;
+    const fs=normalizeStationName(s); if(!fs)continue;
+    let score=0;
+    if(ft.length<=fs.length+3){
+      score=1-levenshtein(ft,fs)/Math.max(ft.length,fs.length,1);
+    }else if(fs.length<=ft.length){
+      /* 长句 OCR：滑窗比整句相似度，否则长文本永远匹配不上短站名 */
+      for(const wl of [fs.length-1,fs.length,fs.length+1]){
+        if(wl<2||wl>ft.length)continue;
+        for(let i=0;i+wl<=ft.length;i++){
+          const sim=1-levenshtein(ft.slice(i,i+wl),fs)/wl;
+          if(sim>score)score=sim;
+        }
+      }
+    }
+    if(score>bestScore){bestScore=score;best=s;}
+  }
+  return bestScore>=0.8?best:'';
+}
+
+/* 驿站核心名：去掉"驿站/快递服务中心"等通用后缀，用于变体重合判断 */
+function stationCore(name){
+  return String(name||'').replace(new RegExp('(?:'+ST_SUFFIX+')$'),'').trim();
+}
+
+/* 兼容旧调用 */
+function matchStation(text){
+  return matchStationExact(text)||matchStationFuzzy(text);
+}
+
+/* 驿站名后缀词表 */
+const ST_SUFFIX='快递服务中心|快递服务点|快递点|快递驿站|驿站|代收点|自提点|快递柜|自提柜|快递超市|快递站|网点|超市|便利店|门岗|收发室|服务点|裹裹|兔喜|菜鸟|妈妈驿站|熊猫快收';
+
+/* 物流状态前缀：cleanCJK 会把顶部统计（如"运输中0"）与驿站名粘连成一行。
+   必须从候选名头部"剥离"而非整条丢弃，否则会连带丢掉真正的驿站名 */
+const ST_STATUS_PREFIX='运输中|派件中|派送中|投递中|签收中|揽收中|已签收|已取件|已发货|已到达|已派送|已放入|已到|待取件|待收货|待付款|待评价|待发货|拼团中|打包中|已评价|已取消|待取|待收|待付';
+
+/* 驿站名归一化相似度：判断是否与已有驿站重复 */
+function stationExists(name){
+  if(!name||!stations)return false;
+  const fn=normalizeStationName(name);
+  const cn=stationCore(name);
+  return stations.some(s=>{
+    const fs=normalizeStationName(s);
+    if(s===name || fs===fn)return true;
+    if(fs.length>3&&fn.indexOf(fs)>=0)return true;
+    if(fn.length>3&&fs.indexOf(fn)>=0)return true;
+    /* 核心地名重合视为同一驿站："理工大学驿站" ≈ "重庆理工大学快递服务中心" */
+    /* 收紧：要求被包含的核心名长度 ≥4，避免"1栋"和"财经学院1栋旁"被误合并 */
+    const cs=stationCore(s);
+    if(cn&&cs){
+      const minLen=Math.min(cn.length,cs.length);
+      if(minLen>=4 && (cn.indexOf(cs)>=0||cs.indexOf(cn)>=0)) return true;
+    }
+    return false;
+  });
+}
+
+/* 加入驿站（去重 + 持久化） */
+function addStation(name){
+  if(!name)return false;
+  if(stationExists(name))return false;
+  stations.push(name);
+  stations=[...new Set(stations)];
+  saveStas();
+  return true;
+}
+
+/* 从文本中提取候选驿站名并打分（均衡模式：标准后缀 + 短信头 + 方位功能词 + 邻近加权） */
+function extractStations(text){
+  const scores=new Map();
+  if(!text)return scores;
+  const add=(name,score)=>{
+    if(!name)return;
+    name=String(name).trim();
+    /* 去掉与取件码粘连产生的前导/尾随数字与连字符 */
+    name=name.replace(/^[\d\-—]{2,}/,'').replace(/[\d\-—]{2,}$/,'');
+    /* 剥离头部粘连的物流状态词与计数数字：
+       "运输中0财经学院1栋旁快递服务中心" → "财经学院1栋旁快递服务中心"；
+       "已放入代收点" → "代收点"（随后因长度不足被丢弃） */
+    name=name.replace(new RegExp('^(?:'+ST_STATUS_PREFIX+')'),'').replace(/^[\s\-—]+/,'');
+    if(name.length<4||name.length>22)return;
+    if(!/[\u4e00-\u9fa5]/.test(name))return;
+    if(/^[\d\s\-—.,，]+$/.test(name))return;
+    if(matchCourier(name))return;                      // 排除快递公司名
+    if(/^(重庆市|四川省|广东省|浙江省|江苏省|山东省|河南省|北京市|上海市|天津市)/.test(name))return; // 排除省级行政区开头
+    if(stationCore(name).length<2)return;              // 去掉后缀后无实际地名
+    scores.set(name,(scores.get(name)||0)+score);
+  };
+
+  let m;
+  /* 模式 1：标准后缀（置信度高）。允许数字/字母+中文开头，如"9园区桂轩..." */
+  const re1=new RegExp('[\\u4e00-\\u9fa5A-Za-z0-9]{1,18}(?:'+ST_SUFFIX+')','g');
+  while((m=re1.exec(text))!==null){
+    let raw=m[0];
+    /* 核心名必须含中文，防止纯数字/英文 fragment 误匹配 */
+    const core=raw.replace(new RegExp('(?:'+ST_SUFFIX+')$'),'').trim();
+    if(!/[\u4e00-\u9fa5]/.test(core))continue;
+    add(raw,3);
+  }
+
+  /* 模式 2：短信头【XX】（含驿站特征词则更高分） */
+  const re2=/【([^】\s]{2,20})】/g;
+  const suffixRe=new RegExp(ST_SUFFIX);
+  while((m=re2.exec(text))!==null){
+    const inner=m[1];
+    add(inner, suffixRe.test(inner)?3:2);
+  }
+
+  /* 模式 3：方位 + 功能词（东门快递点、西门驿站）。
+     后缀限定为具体词，避免把长地名的片段（如"…理工大学快递"）当成驿站。
+     要求主体至少 2 个汉字，抑制"栋旁快递服务中心"这类残缺片段 */
+  const re3=/[\u4e00-\u9fa5]{2,8}(?:东|南|西|北|东南|西南|东北|西北)?门?[\u4e00-\u9fa5]{1,6}(?:驿站|快递点|代收点|自提点|快递站|快递柜|自提柜|快递超市|快递服务中心)/g;
+  while((m=re3.exec(text))!==null) add(m[0],3);
+
+  /* 模式 4：靠近"取件码"行的地点加权。
+     原始 OCR 行带空格会让 re1 失配，故逐行 cleanCJK 后再匹配 */
+  const lines=String(text).split(/\r?\n/);
+  lines.forEach((l,i)=>{
+    if(!/取件码|取件号|提货码|取货号/.test(l))return;
+    for(let j=Math.max(0,i-2);j<Math.min(lines.length,i+3);j++){
+      const mm=re1.exec(cleanCJK(lines[j]));
+      if(mm) add(mm[0],1);
+      re1.lastIndex=0;
+    }
+  });
+
+  return scores;
+}
+
+/* 取文本中得分最高的候选驿站（阈值 >=2）。
+   同分时优先取更完整的长名，避免"栋旁快递服务中心"盖过"财经学院1栋旁快递服务中心" */
+function bestStationCandidate(text){
+  const scores=extractStations(text);
+  let best='',bestScore=0;
+  scores.forEach((score,name)=>{
+    if(score<2)return;
+    if(score>bestScore||(score===bestScore&&name.length>best.length)){bestScore=score;best=name;}
+  });
+  return best;
+}
+
+/* 取件码归一化：全角转半角、连字符统一、分段 OCR 易混字符纠错 */
+function normalizeCode(raw){
+  if(raw==null)return'';
+  let s=unifyWidth(String(raw))
+    .replace(/[\u3000 ]/g,'')
+    .replace(/[—–−~～·•_]/g,'-')
+    .replace(/[。.,，;；:：]+$/,'')
+    .replace(/-{2,}/g,'-')
+    .replace(/^[-]+|[-]+$/g,'');
+  if(!s)return s;
+  const fix=t=>t.replace(/[Oo]/g,'0').replace(/[lI|!]/g,'1');
+  if(/^[\dOolI|!\-]+$/.test(s)){
+    if(/\d/.test(s)||/^[OolI|!\-]+$/.test(s)) s=fix(s);
+  }else if(s.indexOf('-')>=0){
+    s=s.split('-').map(seg=>{
+      if(!/^[\dOolI|!]+$/.test(seg))return seg;
+      const digits=(seg.match(/\d/g)||[]).length;
+      const conf=(seg.match(/[OolI|!]/g)||[]).length;
+      if(digits===0||conf>digits)return seg;
+      return fix(seg);
+    }).join('-');
+  }
+  return s;
+}
+
+/* 排除手机号、日期、单号、金额、订单号、电话号码片段等干扰项。
+   ctx       为 token 所在处的文本，用于上下文判断；
+   allowShort 为 true 时表示该 token 紧跟在"取件码"等关键词之后，
+              此时放宽 1~4 位纯数字的限制（不少驿站本身就是 4 位取件码）。 */
+function isNoise(c,ctx,allowShort){
+  if(!c||c.length<3||c.length>18)return true;
+  if(!/[A-Za-z0-9]/.test(c))return true;
+  if(/^1[3-9]\d{9}$/.test(c)) return true;                        // 手机号
+  if(/^\d{4}[-\/年]\d{1,2}[-\/月]\d{1,2}/.test(c))return true;    // 日期
+  if(/^\d{1,2}:\d{2}/.test(c))return true;                        // 时间
+  if(/^\d{11,20}$/.test(c))return true;                           // 快递单号
+  if(/^[A-Z]{1,3}\d{10,18}$/i.test(c))return true;                // 字母+数字单号（YT/SF 等）
+  if(/^(19|20)\d{2}$/.test(c))return true;                        // 年份
+  if(/^\d+\.\d+$/.test(c))return true;                            // 金额
+  if(!allowShort && /^\d{1,4}$/.test(c))return true;              // 过短（多为手机号前缀/分机号）
+  /* 超长连续数字段：订单号/运单号 */
+  if(/\d{9,}/.test(c))return true;
+  if(!allowShort && /^[A-Fa-f0-9]{12,}$/.test(c))return true;
+  if(/^\d{3,4}$/.test(c) && ctx && /(电话|联系|拨打|站点|手机|致电|呼叫)/.test(ctx))return true;
+  /* 掩码手机号/虚拟号片段：码值或同行出现 * 号（86-177****6552） */
+  if(c.indexOf('*')>=0 || (ctx && ctx.indexOf('*')>=0)) return true;
+  /* MM-DD / HH-MM 日期片段（09-20） */
+  if(/^\d{2}-\d{2}$/.test(c)) return true;
+  /* 价格/营销文案里的数字（价保 42.8 15天） */
+  if(!allowShort && ctx && /(价保|无理由|退货|退款|优惠|券|折|元|¥|￥|急|包邮|销量)/.test(ctx)) return true;
+  const parts=c.split('-');
+  if(parts.length>1){
+    if(parts.some(p=>p.length>8))return true;
+    if(c.replace(/-/g,'').length>12)return true;
+    if(!allowShort && parts.length>=3 && parts.every(p=>/^\d{4,}$/.test(p)))return true;
+  }
+  return false;
+}
+
+/* 取件码引导词。长词必须排在短词前面，否则「取件号码」会被「取件号」截断，
+   剩下的「码」是汉字，会挡住后面的码值匹配。 */
+const CODE_KEY='取件号码|取件编号|取件凭证|取件码|取件号|取货号码|取货编号|取货凭证|取货密码|取货码|取货号|提货号码|提货编号|提货凭证|提货码|提货号|自提码|入库码|上架码|包裹码|快递码|凭证券|验证码|提取码|存放位置|货号';
+
+/* 负向上下文：如果 token 所在处包含这些关键词，说明它是订单号/手机号/地址，不是取件码 */
+const NEG_CTX='订单编号|订单号|运单号|快递单号|物流单号|单号|联系电话|电话号码|手机号|联系方式|拨打|联系站点|站点电话|联系快递员';
+
+/* 关键词与码值之间允许出现的间隔。除标点/空格外，还需容忍少量汉字连接词——
+   短信里"取件码是 XXX""取件码为 XXX""取件码如下：XXX"都非常常见，
+   若只允许标点，这些写法会整条漏掉。连接词白名单化可避免跨越整句乱抓。 */
+const CODE_GAP='[\\s:：,，.。、;；\\-—–的是为如共您请等下的]{0,6}';
+const CODE_TOKEN='([A-Za-z0-9][A-Za-z0-9\\-—–]{1,17})';
+
+/* 把 OCR 断行的码值拼回：仅黏合字母数字/连字符边界，不合并整句中文 */
+function glueSplitCodes(text){
+  return String(text||'').replace(/([A-Za-z0-9][\-—–]?)[\r\n]+(?=[A-Za-z0-9])/g,'$1');
+}
+
+/* OCR 常把字母与数字拆开（"A 8-2-3071"）：先拼回再匹配，否则首字母会丢 */
+function rejoinAlnum(s){
+  let r=String(s||'');
+  for(let i=0;i<4;i++){
+    const n=r.replace(/([A-Za-z])[ \t]+(?=[0-9])/g,'$1')
+             .replace(/([0-9])[ \t]+(?=[A-Za-z])/g,'$1');
+    if(n===r)break;
+    r=n;
+  }
+  return r;
+}
+
+function parseText(text){
+  if(!text)return[];
+  const glued=glueSplitCodes(text);
+  const fullCl=cleanCJK(glued);
+  const globalCourier=matchCourier(fullCl);
+  const globalStation=matchStationExact(fullCl)||bestStationCandidate(fullCl)||matchStationFuzzy(fullCl);
+  const phoneLike=new Set();
+  const phoneRe=/(?:站点|电话|联系|拨打|致电|呼叫|手机|联系方式).*?(\d{3,6})/g;
+  let pm; while((pm=phoneRe.exec(glued))!==null) phoneLike.add(pm[1]);
+  const negRe=new RegExp(NEG_CTX);
+
+  const lines=glued.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const out=[],seen=new Set();
+  let curCourier='',curStation='';
+
+  const push=(rawLine,ctx,strong)=>{
+    if(out.length>=16)return false;
+    const code=normalizeCode(rawLine);
+    if(!code||phoneLike.has(code))return false;
+    if(isNoise(code,ctx,!!strong))return false;
+    if(seen.has(code))return false;
+    if(!strong && code.indexOf('-')>=0 && code.replace(/-/g,'').length<6) return false;
+    seen.add(code);
+    const ct=ctx||'';
+    out.push({
+      code:code,
+      courier:matchCourier(ct)||curCourier||globalCourier,
+      station:matchStation(ct)||curStation||globalStation,
+      _s:strong?1:0,
+      _i:out.length
+    });
+    return true;
+  };
+
+  for(const line of lines){
+    const cl=rejoinAlnum(cleanCJK(line));
+    const cr0=matchCourier(cl); if(cr0) curCourier=cr0;
+    const st0=matchStation(cl); if(st0) curStation=st0;
+
+    const re1=new RegExp('(?:'+CODE_KEY+')'+CODE_GAP+CODE_TOKEN,'g');
+    let m,keywordHit=false,firstEnd=-1;
+    while((m=re1.exec(cl))!==null){
+      const raw=m[1];
+      if(firstEnd<0) firstEnd=re1.lastIndex;
+      if(negRe.test(cl) && /\d{5,}/.test(raw)) continue;
+      if(push(raw,cl,true)) keywordHit=true;
+    }
+    if(firstEnd>=0){
+      const rest=cl.slice(firstEnd);
+      const reMore=/\b([A-Z0-9]{1,4}(?:[-—–][A-Z0-9]{1,5}){1,3})\b/g;
+      let mm;
+      while((mm=reMore.exec(rest))!==null){
+        const before=rest[mm.index-1]||'', after=rest[mm.index+mm[1].length]||'';
+        if(before===':'||after===':')continue;
+        if(rest.indexOf('*')>=0)continue;
+        if(push(mm[1],cl,true)) keywordHit=true;
+      }
+    }
+
+    const re2=/\b([A-Z0-9]{1,4}(?:[-—–][A-Z0-9]{1,5}){1,3})\b/g;
+    while((m=re2.exec(cl))!==null){
+      const raw=m[1];
+      const beforeChar=cl[m.index-1]||'', afterChar=cl[m.index+raw.length]||'';
+      if(beforeChar===':'||afterChar===':')continue;
+      if(negRe.test(cl) && raw.replace(/-/g,'').length>10) continue;
+      if(!keywordHit && raw.replace(/[^0-9]/g,'').length<6) continue;
+      push(raw,cl,!keywordHit);
+    }
+
+    if(!keywordHit){
+      const alnum=cl.replace(/[^A-Za-z0-9]/g,'');
+      if((cl.match(/\d/g)||[]).length>=3&&alnum.length<=12){
+        const re3=/\b([A-Z]{0,2}\d{5,8})\b/g;
+        while((m=re3.exec(cl))!==null) push(m[1],cl,false);
+      }
+    }
+  }
+
+  let m4;
+  const re4=new RegExp('(?:'+CODE_KEY+')'+CODE_GAP+CODE_TOKEN,'g');
+  while((m4=re4.exec(fullCl))!==null){
+    const raw=m4[1];
+    const ctx=fullCl.slice(Math.max(0,m4.index-24),Math.min(fullCl.length,re4.lastIndex+24));
+    if(negRe.test(ctx) && /\d{5,}/.test(raw)) continue;
+    push(raw,ctx,true);
+  }
+
+  out.sort((a,b)=>(b._s-a._s)||(a._i-b._i));
+
+  const strongCodes=out.filter(o=>o._s).map(o=>o.code);
+  const kept=out.filter(o=>{
+    if(o._s||!strongCodes.length)return true;
+    return !strongCodes.some(s=>s!==o.code&&(s.indexOf(o.code)===0||s.lastIndexOf(o.code)===s.length-o.code.length));
+  });
+  return kept.map(o=>({code:o.code,courier:o.courier,station:o.station}));
+}
+
+/* ============================================================
+   OCR 识别管线（v3）
+   ① 预处理：缩放 → 灰度 → 深色底反色 → 分位拉伸 → USM 锐化 → 可选局部二值化
+   ② 主识别：chi_sim+eng 多版面择优，命中可信取件码即停（多数情况只跑 1 个版面）
+   ③ 字母补全：粗体字母常被中文引擎认成汉字（A → 及/友/信）。
+      此时按词框裁出码值区域，用「字母数字白名单 + 单行版面」重识别，补回首字母。
+   ============================================================ */
+const PP_MAXPX=3.6e6;
+const OCR_WL='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
+
+function loadImage(file){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){ res({img:img,url:url}); };
+    img.onerror=function(){ try{URL.revokeObjectURL(url);}catch(e){} rej(new Error('图片读取失败')); };
+    img.src=url;
+  });
+}
+
+/* 灰度数组 → 带白边的画布（白边避免贴边文字行分割失败） */
+function ppCanvas(px,w,h,pad){
+  var c=document.createElement('canvas');
+  c.width=w+pad*2; c.height=h+pad*2;
+  var cx=c.getContext('2d');
+  cx.fillStyle='#FFFFFF'; cx.fillRect(0,0,c.width,c.height);
+  var im=cx.createImageData(w,h), dd=im.data, tot=w*h;
+  for(var i=0,pp=0;pp<tot;i+=4,pp++){ var v=px[pp]; dd[i]=v; dd[i+1]=v; dd[i+2]=v; dd[i+3]=255; }
+  cx.putImageData(im,pad,pad);
+  return c;
+}
+function canvasBlob(c){
+  return new Promise(function(r){ try{ c.toBlob(function(b){ r(b||null); },'image/png'); }catch(e){ r(null); } });
+}
+/* 从预处理画布上裁一块（坐标与 OCR 词框同一坐标系） */
+function cropCanvas(src,x,y,w,h){
+  var c=document.createElement('canvas');
+  c.width=Math.max(1,w); c.height=Math.max(1,h);
+  var cx=c.getContext('2d');
+  cx.fillStyle='#FFFFFF'; cx.fillRect(0,0,c.width,c.height);
+  try{ cx.drawImage(src,x,y,w,h,0,0,c.width,c.height); }catch(e){}
+  return c;
+}
+
+/* 可分离盒式均值模糊（滑动窗口，耗时与半径无关），用于局部自适应阈值 */
+function ppBoxMean(src,w,h,r,tmp,out){
+  var win=2*r+1,x,y,k,sum;
+  for(y=0;y<h;y++){
+    var row=y*w; sum=0;
+    for(k=-r;k<=r;k++){ var xx=k<0?0:(k>=w?w-1:k); sum+=src[row+xx]; }
+    for(x=0;x<w;x++){
+      tmp[row+x]=sum/win;
+      var ax=x+r+1, sx=x-r;
+      sum+=src[row+(ax>=w?w-1:ax)]-src[row+(sx<0?0:sx)];
+    }
+  }
+  for(x=0;x<w;x++){
+    sum=0;
+    for(k=-r;k<=r;k++){ var yy=k<0?0:(k>=h?h-1:k); sum+=tmp[yy*w+x]; }
+    for(y=0;y<h;y++){
+      out[y*w+x]=sum/win;
+      var ay=y+r+1, sy=y-r;
+      sum+=tmp[(ay>=h?h-1:ay)*w+x]-tmp[(sy<0?0:sy)*w+x];
+    }
+  }
+}
+
+/* 预处理：产出灰度增强图（必做）与二值图（按需，省一次大图编码） */
+async function preprocess(file){
+  const fallback={gray:file,binFn:async function(){return null;},canvas:null,invert:false,ok:false};
+  let url=null;
+  try{
+    const L=await loadImage(file); url=L.url; const img=L.img;
+    const ow=img.naturalWidth||img.width, oh=img.naturalHeight||img.height;
+    if(!ow||!oh) return fallback;
+    const MINW=1600;
+    let s=ow<MINW?MINW/ow:1; s=Math.min(s,2.6);
+    let iw=Math.max(1,Math.round(ow*s)), ih=Math.max(1,Math.round(oh*s));
+    if(iw*ih>PP_MAXPX){ const k=Math.sqrt(PP_MAXPX/(iw*ih)); iw=Math.max(1,Math.round(iw*k)); ih=Math.max(1,Math.round(ih*k)); }
+    const pad=Math.max(16,Math.min(48,Math.round(iw*0.02)));
+    const cw=iw+pad*2, chh=ih+pad*2, n=iw*ih;
+    const cv=document.createElement('canvas'); cv.width=cw; cv.height=chh;
+    const ctx=cv.getContext('2d',{willReadFrequently:true});
+    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,cw,chh);
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,pad,pad,iw,ih);
+    const d=ctx.getImageData(0,0,cw,chh).data;
+    /* 灰度（BT.601） */
+    const g=new Uint8Array(n);
+    for(let i2=0,px2=0;px2<n;i2+=4,px2++) g[px2]=(d[i2]*0.299+d[i2+1]*0.587+d[i2+2]*0.114)|0;
+    /* 深色底自动反色（夜间模式截图） */
+    let dark=0;
+    for(let y=0;y<ih;y++){ const r0=(y+pad)*cw+pad; for(let x=0;x<iw;x++) if(g[r0+x]<128) dark++; }
+    const invert=dark>n*0.55;
+    /* 分位对比度拉伸 */
+    const hist=new Uint32Array(256);
+    for(let y=0;y<ih;y++){ const r0=(y+pad)*cw+pad; for(let x=0;x<iw;x++) hist[invert?255-g[r0+x]:g[r0+x]]++; }
+    const clip=Math.max(1,Math.floor(n*0.005));
+    let acc=0,lo=0,hi=255;
+    for(let v=0;v<256;v++){ acc+=hist[v]; if(acc>clip){ lo=v; break; } }
+    acc=0;
+    for(let v=255;v>=0;v--){ acc+=hist[v]; if(acc>clip){ hi=v; break; } }
+    const span=Math.max(1,hi-lo);
+    const gray=new Uint8ClampedArray(n);
+    for(let y=0;y<ih;y++){
+      const r0=(y+pad)*cw+pad, o=y*iw;
+      for(let x=0;x<iw;x++){ const v=Math.round(((invert?255-g[r0+x]:g[r0+x])-lo)*255/span); gray[o+x]=v<0?0:(v>255?255:v); }
+    }
+    /* USM 锐化：找回缩放后变软的笔画 */
+    const f1=new Float32Array(n), f2=new Float32Array(n);
+    for(let y=0;y<ih;y++){
+      const r0=y*iw;
+      for(let x=0;x<iw;x++){
+        const c=gray[r0+x];
+        const l=x>0?gray[r0+x-1]:c, rr=x<iw-1?gray[r0+x+1]:c;
+        f1[r0+x]=(l+c*2+rr)*0.25;
+      }
+    }
+    for(let y=0;y<ih;y++){
+      const r0=y*iw, up=y>0?r0-iw:r0, dn=y<ih-1?r0+iw:r0;
+      for(let x=0;x<iw;x++) f2[r0+x]=(f1[up+x]+f1[r0+x]*2+f1[dn+x])*0.25;
+    }
+    for(let q=0;q<n;q++){ const v=gray[q]+0.7*(gray[q]-f2[q]); gray[q]=v<0?0:(v>255?255:v); }
+    const grayCanvas=ppCanvas(gray,iw,ih,pad);
+    const grayBlob=await canvasBlob(grayCanvas);
+    let binBlob=null;
+    const binFn=async function(){
+      if(binBlob) return binBlob;
+      try{
+        const r=Math.max(8,Math.min(24,Math.round(iw/80)));
+        ppBoxMean(gray,iw,ih,r,f1,f2);
+        const bin=new Uint8ClampedArray(n);
+        for(let q=0;q<n;q++) bin[q]=gray[q]>f2[q]*0.85?255:0;
+        binBlob=await canvasBlob(ppCanvas(bin,iw,ih,pad));
+      }catch(e){ binBlob=null; }
+      return binBlob;
+    };
+    return {gray:grayBlob||file,binFn:binFn,canvas:grayCanvas,invert:invert,ok:true};
+  }catch(e){ return fallback; }
+  finally{ if(url){ try{URL.revokeObjectURL(url);}catch(e){} } }
+}
+
+async function handleFile(e){ const f=e.target.files[0]; if(f) await processImage(f); e.target.value=''; }
+
+let ocrPhase='识别中';
+let workerReady=null, isOcrRunning=false;
+
+/* 创建 worker：user_defined_dpi 必设（截图无 DPI 元数据时引擎按 70dpi 估算，行分割会失败） */
+function buildWorker(stEl){
+  return Tesseract.createWorker('chi_sim+eng',1,{logger:function(m){
+    if(!stEl)return;
+    var pr=m&&m.progress!=null?Math.round(m.progress*100):0;
+    if(m.status==='recognizing text') stEl.textContent=ocrPhase+' '+pr+'%';
+    else if(m.status==='loading language traineddata') stEl.textContent='下载语言包 '+pr+'%';
+    else if(m.status==='loading tesseract core') stEl.textContent='加载识别引擎...';
+    else if(m.status==='initializing tesseract') stEl.textContent='初始化...';
+  }}).then(async function(w){
+    try{ await w.setParameters({user_defined_dpi:'300',preserve_interword_spaces:'1',tessedit_char_whitelist:'',tessedit_pageseg_mode:'6'}); }catch(e){}
+    return w;
+  });
+}
+
+/* 空闲预热：提前下载语言包并初始化，点识别时不用干等 */
+/* 识别引擎脚本：本地文件优先 → 多 CDN 兜底，加载后校验 Tesseract 是否真可用。
+   任一来源失败或“加载了但没暴露 Tesseract”都会自动换下一个，全部失败才返回 false。 */
+const TESS_SRC=[
+  'tesseract.min.js',
+  'https://cdn.bootcdn.net/ajax/libs/tesseract.js/5.0.4/tesseract.min.js',
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js',
+  'https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js'
+];
+let tessLoadP=null;
+function loadTesseract(){
+  if(typeof Tesseract!=='undefined')return Promise.resolve(true);
+  if(tessLoadP)return tessLoadP;
+  const attempt=function(i){
+    if(i>=TESS_SRC.length)return Promise.resolve(false);
+    return new Promise(function(res){
+      let done=false;
+      const finish=function(){
+        if(done)return; done=true;
+        if(typeof Tesseract!=='undefined')res(true);
+        else attempt(i+1).then(res);
+      };
+      const s=document.createElement('script');
+      s.onload=finish; s.onerror=finish;
+      setTimeout(finish,12000);
+      s.src=TESS_SRC[i];
+      (document.head||document.documentElement).appendChild(s);
+    });
+  };
+  tessLoadP=attempt(0).then(function(ok){ if(!ok) tessLoadP=null; return ok; });
+  return tessLoadP;
+}
+
+/* 空闲预热：先加载脚本，再下载语言包并初始化，点识别时不用干等 */
+function warmWorker(){
+  if(worker||workerReady)return;
+  workerReady=loadTesseract().then(function(ok){
+    if(!ok||typeof Tesseract==='undefined'){ workerReady=null; return null; }
+    return buildWorker(null).then(function(w){ worker=w; return w; }).catch(function(){ workerReady=null; return null; });
+  });
+}
+
+async function ensureWorker(stEl){
+  if(worker)return worker;
+  if(workerReady){ await workerReady.catch(function(){}); if(worker)return worker; }
+  stEl.textContent='首次需下载语言包（约18MB），请稍候...';
+  var retries=3;
+  while(retries>0){
+    try{ worker=await buildWorker(stEl); return worker; }
+    catch(e){
+      retries--;
+      if(retries===0) throw e;
+      stEl.textContent='加载失败，重试('+retries+')...';
+      await new Promise(function(r){ setTimeout(r,2000); });
+    }
+  }
+}
+
+/* ---- 词框与码值细化 ---- */
+function ocrWords(data){
+  var out=[];
+  function add(w){
+    var t=((w&&w.text)||'').replace(/\s+/g,'');
+    if(!t)return;
+    var b=(w&&w.bbox)||{};
+    var x=b.x0!=null?b.x0:b.left, y=b.y0!=null?b.y0:b.top;
+    var x1=b.x1!=null?b.x1:(b.right!=null?b.right:(x+(b.width||0)));
+    var y1=b.y1!=null?b.y1:(b.bottom!=null?b.bottom:(y+(b.height||0)));
+    if(typeof x!=='number'||typeof y!=='number')return;
+    out.push({text:t,x:x,y:y,w:x1-x,h:y1-y});
+  }
+  var blocks=(data&&data.blocks)||[];
+  for(var a=0;a<blocks.length;a++){
+    var ps=blocks[a].paragraphs||[];
+    for(var b2=0;b2<ps.length;b2++){
+      var ls=ps[b2].lines||[];
+      for(var c=0;c<ls.length;c++){
+        var ws=ls[c].words||[];
+        for(var d2=0;d2<ws.length;d2++) add(ws[d2]);
+      }
+    }
+  }
+  if(!out.length && data && data.words){ for(var e=0;e<data.words.length;e++) add(data.words[e]); }
+  return out;
+}
+const digitsOf=function(s){ return String(s==null?'':s).replace(/\D/g,''); };
+const hasLetter=function(s){ return /[A-Za-z]/.test(String(s==null?'':s)); };
+
+/* 细化结果是否可信：原标题是「纯数字连字符码」，新结果数字主体一致且补回了字母 */
+function refineAccept(oldCode,newCode){
+  if(!oldCode||!newCode)return false;
+  if(hasLetter(oldCode))return false;
+  if(!hasLetter(newCode))return false;
+  var od=digitsOf(oldCode), nd=digitsOf(newCode);
+  return !!od && od===nd;
+}
+
+/* 裁出码值所在的窄条，用白名单 + 单行版面重识别，补回被中文引擎吞掉的字母 */
+async function refineCode(code,words,canvasEl){
+  if(hasLetter(code)||!canvasEl||!words||!words.length)return code;
+  var ds=digitsOf(code);
+  if(!ds)return code;
+  var hit=null;
+  for(var i2=0;i2<words.length;i2++){
+    var w=words[i2];
+    if(!w.h||w.h<8)continue;
+    if(digitsOf(w.text)===ds){ hit=w; break; }
+  }
+  if(!hit)return code;
+  var hh=Math.max(12,hit.h);
+  var padL=Math.round(hh*1.9), padR=Math.round(hh*0.5), padT=Math.round(hh*0.55), padB=Math.round(hh*0.55);
+  var x=Math.max(0,Math.round(hit.x-padL)), y=Math.max(0,Math.round(hit.y-padT));
+  var w2=Math.min(canvasEl.width-x,Math.round(hit.w+padL+padR));
+  var h2=Math.min(canvasEl.height-y,Math.round(hh+padT+padB));
+  if(w2<8||h2<8)return code;
+  var old=code;
+  try{
+    const crop=cropCanvas(canvasEl,x,y,w2,h2);
+    await worker.setParameters({tessedit_char_whitelist:OCR_WL,tessedit_pageseg_mode:'8'});
+    const r=await worker.recognize(crop);
+    const t=(((r&&r.data&&r.data.text)||'')).replace(/\s+/g,'');
+    if(refineAccept(old,t)) return t;
+  }catch(e){}
+  finally{ try{ await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:'6'}); }catch(e){} }
+  return old;
+}
+
+/* 版面择优：优先「带连字符的码」，其次「码的个数」，再看是否含字母、长度、置信度 */
+function codeScore(codes,conf){
+  if(!codes||!codes.length)return -1;
+  var c=codes[0].code||'';
+  var hy=/[-\u2014\u2013]/.test(c)?1:0;
+  var lt=hasLetter(c)?1:0;
+  var ln=c.replace(/[-\u2014\u2013]/g,'').length;
+  return hy*100000+codes.length*1000+lt*100+Math.min(ln,20)*10+Math.min(conf||0,100)/100;
+}
+function passGood(codes){
+  if(!codes||!codes.length)return false;
+  var c=codes[0].code||'';
+  return /[-\u2014\u2013]/.test(c) && c.replace(/[-\u2014\u2013]/g,'').length>=5;
+}
+
+/* 主流程：灰度标准版面 → 二值增强 → 稀疏版面；命中即可信结果就收工 */
+let lastOcrFile=null;
+
+/* 引擎脚本加载失败时的可操作提示（不静默） */
+function ocrEngineFail(stEl){
+  stEl.textContent='';
+  const wrap=document.createElement('div');
+  wrap.style.textAlign='center';
+  const t=document.createElement('div');
+  t.style.cssText='font-size:14.5px;font-weight:700;color:var(--tx-1);line-height:1.7';
+  t.innerHTML='🧯 识别引擎没加载出来<br><span style="font-size:12.5px;font-weight:500;color:var(--tx-2)">可能是网络被拦截，或当前预览环境不允许外部脚本<br>请在 Safari 中打开本页再试</span>';
+  const btn=document.createElement('button');
+  btn.className='ocr-cancel';
+  btn.textContent='重试加载';
+  btn.style.marginTop='14px';
+  btn.onclick=function(){ tessLoadP=null; if(lastOcrFile) processImage(lastOcrFile); else closeOCR(); };
+  wrap.appendChild(t); wrap.appendChild(btn);
+  stEl.appendChild(wrap);
+}
+function closeOCR(){ const el=document.getElementById('ocrLoad'); if(el)el.classList.remove('show'); isOcrRunning=false; }
+
+async function processImage(imageFile){
+  if(isOcrRunning)return;
+  isOcrRunning=true;
+  lastOcrFile=imageFile;
+  var loadEl=document.getElementById('ocrLoad'), stEl=document.getElementById('ocrSt');
+  loadEl.classList.add('show');
+  stEl.textContent='正在加载识别引擎...';
+  try{
+    const ok=await loadTesseract();
+    if(!ok){ ocrEngineFail(stEl); return; }
+    stEl.textContent='正在优化图片...';
+    const pp=await preprocess(imageFile);
+    stEl.textContent='图片已增强'+(pp.invert?'（深色模式反色）':'')+'...';
+    await ensureWorker(stEl);
+    const PASSES=[['bin','11','增强'],['gray','6','标准'],['gray','11','稀疏']];
+    let bestCodes=[],bestText='',bestWords=[],bestScore=-1,lastText='';
+    const t0=Date.now();
+    for(let pi=0;pi<PASSES.length;pi++){
+      const key=PASSES[pi][0];
+      let imgBlob=null;
+      if(key==='gray') imgBlob=pp.gray; else imgBlob=await pp.binFn();
+      if(!imgBlob) continue;
+      if(pi>0 && Date.now()-t0>22000) break;
+      ocrPhase='识别中·'+PASSES[pi][2];
+      stEl.textContent=ocrPhase+'...';
+      try{ await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PASSES[pi][1]}); }catch(e){}
+      let ret;
+      try{ ret=await worker.recognize(imgBlob,{},{blocks:true,text:true}); }catch(e){ continue; }
+      const data=ret&&ret.data;
+      const text=(data&&data.text)||'';
+      const conf=(data&&typeof data.confidence==='number')?data.confidence:0;
+      lastText=text;
+      const found=parseText(text);
+      const sc=codeScore(found,conf);
+      if(sc>bestScore){ bestScore=sc; bestCodes=found; bestText=text; bestWords=ocrWords(data); }
+      if(passGood(found)) break;
+    }
+    if(bestCodes.length){
+      const refined=await refineCode(bestCodes[0].code,bestWords,pp.canvas);
+      if(refined&&refined!==bestCodes[0].code) bestCodes[0].code=refined;
+    }
+    showOcrResults(bestCodes,bestText||lastText);
+  }catch(err){
+    stEl.textContent='识别失败: '+(err&&err.message?err.message:err);
+  }finally{
+    isOcrRunning=false;
+  }
+}
+
+function showSheet(html){
+  const old=document.getElementById('mso'); if(old)old.remove();
+  const ov=document.createElement('div');
+  ov.className='mo show'; ov.id='mso'; ov.innerHTML=html;
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+
+/* ---- 新驿站确认：识别到列表中没有的驿站时，先让用户确认是否入库 ---- */
+let pendingStations=[], pendingDone=null;
+
+function collectNewStations(codes){
+  const set=new Set();
+  (codes||[]).forEach(c=>{
+    const n=c&&c.station;
+    if(n && !stationExists(n)) set.add(n);
+  });
+  return [...set];
+}
+
+function confirmStations(names,onDone){
+  if(!names||!names.length){ if(typeof onDone==='function')onDone(); return; }
+  let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>发现新驿站</h3><span class="ocr-done" onclick="closeStationDialog()">跳过</span></div>';
+  h+='<div style="font-size:13.5px;color:var(--tx-3);line-height:1.55;margin-bottom:12px;letter-spacing:-.01em">是否添加到驿站列表？添加后会出现在顶部标签栏，方便分类查看。</div>';
+  names.forEach(n=>{
+    h+=`<div class="ocr-item"><div style="min-width:0"><div class="ocr-code" style="font-size:15.5px">${esc(n)}</div></div><button class="ocr-add" onclick="acceptStation(this,${JSON.stringify(String(n))})">添加</button></div>`;
+  });
+  h+='<button class="set-btn solid" style="margin-top:12px" onclick="acceptAllStations()">全部添加</button>';
+  h+='<button class="set-btn ghost" style="margin-top:8px;margin-bottom:0" onclick="closeStationDialog()">全部跳过</button>';
+  h+='</div>';
+  pendingStations=names;
+  pendingDone=onDone;
+  showSheet(h);
+}
+
+function acceptStation(btn,name){
+  addStation(name);
+  btn.textContent='已添加';
+  btn.classList.add('done');
+  btn.disabled=true;
+  toast('已添加驿站 '+name);
+}
+function acceptAllStations(){
+  let n=0;
+  pendingStations.forEach(x=>{ if(addStation(x))n++; });
+  if(n) toast('已添加 '+n+' 个驿站');
+  closeStationDialog();
+}
+function closeStationDialog(){
+  const ov=document.getElementById('mso'); if(ov)ov.remove();
+  const cb=pendingDone;
+  pendingStations=[]; pendingDone=null;
+  if(typeof cb==='function') cb();
+}
+
+function showOcrResults(codes,raw){
+  const loadEl=document.getElementById('ocrLoad');
+  if(loadEl)loadEl.classList.remove('show');
+  raw=raw||'';
+  /* 先确认新驿站是否入库，再展示取件码结果 */
+  const finish=()=>renderOcrPanel(codes,raw);
+  if(codes.length){
+    const news=collectNewStations(codes);
+    if(news.length){ confirmStations(news,finish); return; }
+  }
+  finish();
+}
+
+function renderOcrPanel(codes,raw){
+  /* 未识别到：给出可排查的原文与替代路径 */
+  if(!codes.length){
+    let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>未识别到取件码</h3><span class="ocr-done" onclick="document.getElementById(\'mso\').remove()">关闭</span></div>';
+    h+='<div style="font-size:13.5px;color:var(--tx-3);line-height:1.55;margin-bottom:12px;letter-spacing:-.01em">建议截图时只保留取件码区域，或直接粘贴短信原文（识别率最高）。</div>';
+    if(raw.trim()){
+      h+='<div class="raw-box" id="rawBox">'+esc(raw.trim())+'</div>';
+      h+='<button class="set-btn ghost" onclick="copyRaw()">复制识别原文</button>';
+      h+='<button class="set-btn ghost" style="margin-bottom:14px" onclick="document.getElementById(\'mso\').remove();openModal();document.getElementById(\'iCode\').value=document.getElementById(\'rawBox\').textContent;">填入原文再解析</button>';
+    }
+    h+='<button class="set-btn solid" style="margin-top:0" onclick="document.getElementById(\'mso\').remove();openModal()">手动添加取件码</button>';
+    h+='</div>';
+    showSheet(h);
+    return;
+  }
+
+  /* 单个：直接带入添加弹窗 */
+  if(codes.length===1){
+    const c=codes[0];
+    openModal();
+    setTimeout(()=>{
+      document.getElementById('iCode').value=c.code;
+      curC=c.courier||'';
+      document.getElementById('iStation').value=c.station||'';
+      renderCrpRow();
+    },60);
+    return;
+  }
+
+  /* 多个：列表 + 一键全加 */
+  let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>识别到 '+codes.length+' 个取件码</h3><span class="ocr-done" onclick="document.getElementById(\'mso\').remove()">完成</span></div>';
+  codes.forEach(c=>{
+    const info=[c.courier,c.station].filter(Boolean).join(' · ');
+    const args=[c.code,c.courier||'',c.station||''].map(x=>JSON.stringify(String(x==null?'':x))).join(',');
+h+=`<div class="ocr-item"><div><div class="ocr-code">${esc(c.code)}</div><div class="ocr-meta">${esc(info||'未识别驿站')}</div></div><button class="ocr-add" onclick="qAdd(${args});this.textContent='已添加';this.classList.add('done');this.disabled=true;">添加</button></div>`;
+  });
+  const all=JSON.stringify(codes.map(c=>({c:String(c.code||''),r:c.courier||'',s:c.station||''})));
+  h+='<button class="set-btn solid" style="margin-top:12px" onclick="qAddAll('+all+')">全部添加（'+codes.length+'）</button>';
+  if(raw.trim()){
+    h+='<button class="set-btn ghost" style="margin-top:10px;margin-bottom:8px" onclick="toggleRaw(this)">查看识别原文</button>';
+    h+='<div class="raw-box" style="display:none">'+esc(raw.trim())+'</div>';
+  }
+  h+='</div>';
+  showSheet(h);
+}
+
+function copyRaw(){
+  const el=document.getElementById('rawBox');
+  if(!el)return;
+  const t=el.textContent;
+  navigator.clipboard.writeText(t).then(()=>toast('原文已复制')).catch(()=>toast('复制失败'));
+}
+
+
+function toggleRaw(btn){
+  const box=btn.nextElementSibling;
+  if(!box)return;
+  const show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  btn.textContent=show?'隐藏识别原文':'查看识别原文';
+}
+
+function qAdd(code,cr,st){
+  items.unshift({id:newId(),ts:Date.now(),code,courier:cr||'',station:st||'',time:new Date().toLocaleString('zh-CN'),pickedUp:false});
+  save();renderCards();toast('已添加 '+code);
+}
+
+function qAddAll(list){
+  if(!list||!list.length)return;
+  for(let i=list.length-1;i>=0;i--){
+    const c=list[i];
+    items.unshift({id:newId(),ts:Date.now(),code:c.c,courier:c.r||'',station:c.s||'',time:new Date().toLocaleString('zh-CN'),pickedUp:false});
+  }
+  save();renderCards();
+  const ov=document.getElementById('mso'); if(ov)ov.remove();
+  toast('已添加 '+list.length+' 个取件码');
+}
+
+function cancelOCR(){document.getElementById('ocrLoad').classList.remove('show');toast('已取消');}
+
+function openStats(){
+  const total=items.length,picked=items.filter(i=>i.pickedUp).length,active=total-picked;
+  const today=new Date().toDateString(),tc=items.filter(i=>new Date(i.id).toDateString()===today).length;
+  const ss={};items.forEach(i=>{if(i.station)ss[i.station]=(ss[i.station]||0)+1;});
+  const top=Object.entries(ss).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('statsCt').innerHTML=`<div class="sgrid"><div class="sc"><div class="n">${total}</div><div class="l">总快递数</div></div><div class="sc"><div class="n">${active}</div><div class="l">待取快递</div></div><div class="sc"><div class="n">${picked}</div><div class="l">已取快递</div></div><div class="sc"><div class="n">${tc}</div><div class="l">今日新增</div></div></div>${top.length?`<div class="sec-t">驿站包裹排行</div><div class="rk">${top.map(n=>`<div class="rk-row"><span class="nm">📍 ${n[0]}</span><span class="ct">${n[1]} 件</span></div>`).join('')}</div>`:''}`;
+  document.getElementById('statsMo').classList.add('show');
+}
+function closeStats(){document.getElementById('statsMo').classList.remove('show');}
+
+function openSettings(){
+  document.getElementById('iStas').value=stations.join('\n');
+  document.getElementById('setMo').classList.add('show');
+}
+function closeSettings(){document.getElementById('setMo').classList.remove('show');}
+function saveSettings(){
+  const stText=document.getElementById('iStas').value.trim();
+  stations=stText.split('\n').map(s=>s.trim()).filter(Boolean);
+  saveStas();
+  closeSettings();toast('已保存');
+}
+
+function exportData(){
+  const data=JSON.stringify({items,stations,version:2});
+  navigator.clipboard.writeText(data).then(()=>toast('数据已复制')).catch(()=>{const ta=document.createElement('textarea');ta.value=data;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('数据已复制');});
+}
+function importData(){
+  const text=document.getElementById('iImport').value.trim();
+  if(!text)return toast('请先粘贴数据');
+  try{
+    const data=JSON.parse(text);
+    if(!data.items||!Array.isArray(data.items))return toast('格式错误');
+    askConfirm('导入会<b>覆盖</b>当前的 '+items.length+' 条记录，且无法恢复。',function(){
+      doImport(data);
+    },'覆盖导入');
+    return;
+  }catch(e){toast('格式错误');}
+}
+function doImport(data){
+  try{
+    items=data.items;save();
+    if(data.stations&&Array.isArray(data.stations)){stations=data.stations;saveStas();}
+    renderCards();closeSettings();toast('导入成功！共'+items.length+'条');
+  }catch(e){toast('格式错误');}
+}
+
+renderCards();
+
+/* 空闲时预热 OCR 引擎：不阻塞首屏，语言包下载放在浏览器空闲期 */
+(function prewarm(){
+  const kick=()=>{ try{ warmWorker(); }catch(e){} };
+  if('requestIdleCallback' in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,2500);
+  /* 页面重新可见时补一次预热（后台预热可能被打断） */
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden&&!worker&&!workerReady) kick(); });
+})();
+
+/* ---- 视觉增强：滚动时 header 材质加深（不涉及业务逻辑） ---- */
+(function(){
+  var hdr=document.querySelector('.hdr'),on=false;
+  function upd(){
+    var y=window.pageYOffset||document.documentElement.scrollTop||0;
+    var next=y>8;
+    if(next!==on){on=next;hdr.classList.toggle('is-scrolled',on);}
+  }
+  window.addEventListener('scroll',upd,{passive:true});
+  window.addEventListener('resize',upd,{passive:true});
+  upd();
+  /* 点击遮罩关闭弹窗 */
+  document.querySelectorAll('.mo').forEach(function(m){
+    m.addEventListener('click',function(e){
+      if(e.target!==m||!m.id)return;
+      if(m.id==='modal')closeModal();
+      else if(m.id==='statsMo')closeStats();
+      else if(m.id==='setMo')closeSettings();
+      else if(m.id==='confirmMo')closeConfirm();
+    });
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      closeConfirm();closeModal();closeStats();closeSettings();
+      const ov=document.getElementById('mso'); if(ov)ov.remove();
+    }
+  });
+})();
+</script>
+</body>
+</html>
