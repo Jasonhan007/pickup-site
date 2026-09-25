@@ -1,0 +1,24 @@
+{
+  "name": "熊熊驿站 · 取件码",
+  "short_name": "熊熊驿站",
+  "description": "截图识别取件码，自动归类驿站与快递公司",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7F2",
+  "theme_color": "#FFF7F2",
+  "icons": [
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
