@@ -178,7 +178,6 @@ body{
 }
 .cd:active{ transform:scale(.978); }
 .cd.picked{ opacity:.5; }
-.cd.sel{ box-shadow:inset 5px 0 0 var(--corp,transparent), 0 0 0 2px var(--accent), var(--sh-2); }
 
 .cd-hd{ display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; gap:var(--s2); }
 .cd-corp{ font-size:12px; font-weight:600; color:var(--tx-2); display:flex; align-items:center; gap:7px; min-width:0; }
@@ -281,13 +280,13 @@ body{
 
 /* ---- 空状态 ---- */
 .empty{ text-align:center; padding:64px var(--s5) var(--s8); animation:fadeIn var(--t-3) var(--ease-out); }
+@keyframes floaty{ 0%,100%{ transform:translateY(0) rotate(0deg);} 50%{ transform:translateY(-7px) rotate(-3deg);} }
 .empty-ring{
   width:92px; height:92px; margin:0 auto var(--s4); border-radius:50%;
   display:flex; align-items:center; justify-content:center; font-size:42px;
   background:var(--surface); border:2px dashed var(--hairline); box-shadow:var(--sh-1);
+  animation:floaty 3.4s var(--ease-io) infinite;
 }
-@keyframes floaty{ 0%,100%{ transform:translateY(0) rotate(0deg);} 50%{ transform:translateY(-7px) rotate(-3deg);} }
-.empty-ring{ animation:floaty 3.4s var(--ease-io) infinite; }
 .empty-t{ font-size:17px; font-weight:800; color:var(--tx-1); letter-spacing:-.018em; margin-bottom:6px; }
 .empty-s{ font-size:13.5px; color:var(--tx-3); line-height:1.55; margin-bottom:var(--s5); }
 .empty-act{
@@ -393,37 +392,6 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 @keyframes toastIn{ from{opacity:0; transform:translateX(-50%) translateY(-16px) scale(.9)} to{opacity:1; transform:translateX(-50%) translateY(0) scale(1)} }
 @keyframes toastOut{ to{opacity:0; transform:translateX(-50%) translateY(-10px) scale(.94)} }
 
-/* ---- 勾选 ---- */
-.chk{
-  width:24px; height:24px; border-radius:50%; border:2px dashed var(--tx-4);
-  display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer;
-  flex-shrink:0; color:transparent; background:var(--surface);
-  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), border-color var(--t-1) var(--ease-out);
-}
-.chk.on{ background:var(--accent); border-color:var(--accent); border-style:solid; color:#fff; box-shadow:0 3px 10px rgba(255,143,176,.32); }
-
-/* ---- 批量条 ---- */
-.batch-bar{
-  display:none; position:fixed; left:0; right:0; bottom:calc(var(--safe-b) + 16px); z-index:101;
-  padding:0 var(--s4); pointer-events:none;
-}
-.batch-bar.show{ display:flex; align-items:center; gap:8px; justify-content:center; animation:fabIn var(--t-2) var(--ease-spring); }
-.batch-inner{
-  pointer-events:auto; display:flex; align-items:center; gap:8px; background:var(--surface-2);
-  border:2px solid rgba(255,255,255,.9); border-radius:var(--r-full); padding:7px 7px 7px 18px;
-  box-shadow:var(--sh-3); max-width:100%;
-}
-.batch-bar .cnt{ font-size:14px; font-weight:800; color:var(--tx-1); flex-shrink:0; font-feature-settings:"tnum"; }
-.batch-bar .abtn{
-  padding:10px 16px; border-radius:var(--r-full); border:none; font-size:13px; font-weight:800;
-  cursor:pointer; touch-action:manipulation; font-family:inherit; min-height:38px; white-space:nowrap;
-  transition:transform var(--t-1) var(--ease-out);
-}
-.abtn-green{ background:linear-gradient(135deg,#7DD79F,#57BE7F); color:#fff; }
-.abtn-red{ background:linear-gradient(135deg,#FF8A93,var(--danger)); color:#fff; }
-.abtn-gray{ background:var(--sunken); color:var(--tx-1); }
-.batch-bar .abtn:active{ transform:scale(.94); }
-
 /* ---- OCR 结果面板 ---- */
 .ocr-sheet{
   width:88%; max-width:400px; max-height:80vh; max-height:80dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--surface-3);
@@ -476,7 +444,7 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 
 @media (display-mode: standalone){
   .hdr{ padding-top:calc(var(--safe-t) + 6px); }
-  .fab-wrap,.batch-bar{ bottom:calc(var(--safe-b) + 22px); }
+  .fab-wrap{ bottom:calc(var(--safe-b) + 22px); }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -512,15 +480,6 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
   </div>
   <div class="tabs" id="staTabs"></div>
   <div class="cl" id="cardList"></div>
-</div>
-
-<div class="batch-bar" id="batchBar">
-  <div class="batch-inner">
-    <span class="cnt" id="batchCnt">已选 0 项</span>
-    <button class="abtn abtn-green" onclick="batchPickup()">已取</button>
-    <button class="abtn abtn-red" onclick="batchDelete()">删除</button>
-    <button class="abtn abtn-gray" onclick="exitSelectMode()">取消</button>
-  </div>
 </div>
 
 <div class="fab-wrap" id="fabWrap">
@@ -588,7 +547,6 @@ let items=JSON.parse(localStorage.getItem('puItems')||'[]');
 const DEFAULT_STATIONS=["北门美食广场","理工大学桂轩快递站","1栋","食堂","沙宣"];
 let stations=JSON.parse(localStorage.getItem('puStas')||JSON.stringify(DEFAULT_STATIONS));
 let curTab='全部',editId=null,worker=null,curC='';
-let selectMode=false,selected=new Set();
 let searchQ='';
 
 /* 默认驿站同步（单一入口，替代原先的 pruneLegacy + migrate 两段）：
@@ -624,7 +582,7 @@ function timeLabel(i){ return i.ts?relTime(i.ts):(i.time||''); }
 function renderStaTabs(){
   const used=new Set(items.map(i=>i.station).filter(Boolean));
   const tabs=['全部',...stations.filter(s=>used.has(s))];
-  document.getElementById('staTabs').innerHTML=tabs.map(s=>`<button class="tab${curTab===s?' on':''}" onclick="setStTab('${s.replace(/'/g,"\\'")}')">${s}</button>`).join('');
+  document.getElementById('staTabs').innerHTML=tabs.map(s=>`<button class="tab${curTab===s?' on':''}" onclick="setStTab(${JSON.stringify(s)})">${esc(s)}</button>`).join('');
 }
 function setStTab(t){curTab=t;renderCards();}
 
@@ -634,7 +592,12 @@ function onSearch(){
   document.querySelector('.search-clear').style.display=searchQ?'flex':'none';
   renderCards();
 }
-function clearSearch(){searchQ='';const el=document.getElementById('searchInput');if(el)el.value='';renderCards();}
+function clearSearch(){
+  searchQ='';
+  const el=document.getElementById('searchInput'); if(el)el.value='';
+  const btn=document.querySelector('.search-clear'); if(btn)btn.style.display='none';
+  renderCards();
+}
 
 function renderCrpRow(){
   document.getElementById('crpRow').innerHTML=COURIERS.map(c=>`<div class="crp-btn${curC===c?' on':''}" onclick="setCrp('${c}')"><span class="crp-t${curC===c?' on':''}">${c}</span></div>`).join('');
@@ -642,7 +605,7 @@ function renderCrpRow(){
 function setCrp(c){curC=curC===c?'':c;renderCrpRow();}
 
 function renderStPick(){
-  document.getElementById('staPick').innerHTML=stations.map(s=>`<div class="sp-btn" onclick="document.getElementById('iStation').value='${s.replace(/'/g,"\\'")}'">${s}</div>`).join('');
+  document.getElementById('staPick').innerHTML=stations.map(s=>`<div class="sp-btn" onclick="document.getElementById('iStation').value=${JSON.stringify(s)}">${esc(s)}</div>`).join('');
 }
 
 function openModal(id){
@@ -732,11 +695,35 @@ function deleteItem(id){
     items=items.filter(i=>i.id!==id);save();renderCards();toast('已删除');
   },'删除');
 }
+/* 剪贴板统一入口：clipboard API 可能整体不存在（非安全上下文 / 旧 iOS），
+   那种情况会在同步阶段抛错，.catch 接不住，必须先判空再回退 execCommand。 */
+function copyText(t){
+  return new Promise(function(res,rej){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(res).catch(function(){ legacyCopy(t)?res():rej(); });
+    }else{
+      legacyCopy(t)?res():rej();
+    }
+  });
+}
+function legacyCopy(t){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=t;
+    ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:-9999px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0,t.length);
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
 function copyCode(c){
-  navigator.clipboard.writeText(c).then(()=>{
+  copyText(String(c)).then(function(){
     toast('已复制 '+c);
     if(navigator.vibrate) navigator.vibrate(10);
-  }).catch(()=>toast('复制失败'));
+  }).catch(function(){ toast('复制失败，请长按选中'); });
 }
 
 function cleanupPicked(){
@@ -747,34 +734,7 @@ function cleanupPicked(){
   },'清理');
 }
 
-function toggleSelectMode(){
-  selectMode=!selectMode;
-  selected.clear();
-  document.getElementById('batchBar').classList.toggle('show',selectMode);
-  document.getElementById('fabWrap').style.display=selectMode?'none':'flex';
-  renderCards(true);
-}
-function exitSelectMode(){
-  selectMode=false;selected.clear();
-  document.getElementById('batchBar').classList.remove('show');
-  document.getElementById('fabWrap').style.display='flex';
-  renderCards();
-}
-function toggleSel(id){if(selected.has(id))selected.delete(id);else selected.add(id);document.getElementById('batchCnt').textContent='已选 '+selected.size+' 项';renderCards(true);}
-function batchPickup(){
-  if(!selected.size)return toast('请先选择快递');
-  items.forEach(i=>{if(selected.has(i.id)){i.pickedUp=true;i.pickedUpTime=new Date().toLocaleString('zh-CN');}});
-  save();exitSelectMode();renderCards();toast('已批量标记取件');
-}
-function batchDelete(){
-  if(!selected.size)return toast('请先选择快递');
-  const n=selected.size;
-  askConfirm('将永久删除选中的 <b>'+n+'</b> 条记录，无法恢复。',function(){
-    items=items.filter(i=>!selected.has(i.id));save();exitSelectMode();renderCards();toast('已删除 '+n+' 条');
-  },'删除');
-}
-
-function renderCards(noAnim){
+function renderCards(){
   /* 控制搜索栏显隐 */
   const sb=document.getElementById('searchBar');
   if(sb) sb.style.display=items.length?'flex':'none';
@@ -807,8 +767,10 @@ function renderCards(noAnim){
   }
   el.innerHTML=f.map((i,n)=>{
     const color=CR[i.courier]||'#BC8F8F';
-    const sel=selected.has(i.id);
-    return `<div class="cd${i.pickedUp?' picked':''}${sel?' sel':''}" style="--corp:${color};${noAnim?'animation:none':'animation-delay:'+Math.min(n,12)*20+'ms'}" ${selectMode?`onclick="toggleSel(${i.id})"`:''}><div class="cd-hd">${selectMode?`<div class="chk${sel?' on':''}">${sel?'✓':''}</div>`:''}<span class="cd-corp"><span class="badge" style="--c:${color}">${i.courier||'快递'}</span><span class="loc">📍 ${i.station||'未指定驿站'}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="${selectMode?`toggleSel(${i.id})`:`copyCode('${i.code}')`}">${i.code}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
+    /* 用户可控字段（code/station/courier）一律转义；onclick 中的码值用 JSON.stringify，
+       否则含引号的码会截断内联脚本，导致复制功能失效 */
+    const codeJs=JSON.stringify(String(i.code==null?'':i.code));
+    return `<div class="cd${i.pickedUp?' picked':''}" style="--corp:${color};animation-delay:${Math.min(n,12)*20}ms"><div class="cd-hd"><span class="cd-corp"><span class="badge" style="--c:${color}">${esc(i.courier||'快递')}</span><span class="loc">📍 ${esc(i.station||'未指定驿站')}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="copyCode(${codeJs})">${esc(i.code)}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
   }).join('');
 }
 
@@ -839,7 +801,7 @@ let lastId=0;
 function newId(){ lastId=Math.max(Date.now(),lastId+1); return lastId; }
 
 /* 快递公司词典：具体承运商优先；OCR 常见错字一并收录 */
-const CM_MAIN=[['极兔','极兔'],['极免','极兔'],['圆通','圆通'],['圆通','圆通'],['中通','中通'],['中通','中通'],['韵达','韵达'],['韵达','韵达'],['申通','申通'],['申通','申通'],['顺丰','顺丰'],['京东','京东'],['京东','京东'],['邮政EMS','邮政EMS'],['邮政','邮政EMS'],['EMS','邮政EMS'],['德邦','德邦']];
+const CM_MAIN=[['极兔','极兔'],['极免','极兔'],['圆通','圆通'],['中通','中通'],['韵达','韵达'],['申通','申通'],['顺丰','顺丰'],['京东','京东'],['邮政EMS','邮政EMS'],['邮政','邮政EMS'],['EMS','邮政EMS'],['德邦','德邦']];
 function matchCourier(text){
   if(!text)return'';
   for(const[k,v]of CM_MAIN)if(text.includes(k))return v;
@@ -1284,10 +1246,14 @@ async function preprocess(file){
     const L=await loadImage(file); url=L.url; const img=L.img;
     const ow=img.naturalWidth||img.width, oh=img.naturalHeight||img.height;
     if(!ow||!oh) return fallback;
-    const MINW=1600;
-    let s=ow<MINW?MINW/ow:1; s=Math.min(s,2.6);
+    const MINW=1600, MAXW=2400, MAXEDGE=3800; /* Safari 单边 canvas 约 4096 上限，留余量 */
+    let s=1;
+    if(ow<MINW) s=MINW/ow;
+    else if(ow>MAXW) s=MAXW/ow;
+    s=Math.min(s,2.6);
     let iw=Math.max(1,Math.round(ow*s)), ih=Math.max(1,Math.round(oh*s));
     if(iw*ih>PP_MAXPX){ const k=Math.sqrt(PP_MAXPX/(iw*ih)); iw=Math.max(1,Math.round(iw*k)); ih=Math.max(1,Math.round(ih*k)); }
+    if(iw>MAXEDGE||ih>MAXEDGE){ const k=Math.min(MAXEDGE/iw,MAXEDGE/ih); iw=Math.max(1,Math.round(iw*k)); ih=Math.max(1,Math.round(ih*k)); }
     const pad=Math.max(16,Math.min(48,Math.round(iw*0.02)));
     const cw=iw+pad*2, chh=ih+pad*2, n=iw*ih;
     const cv=document.createElement('canvas'); cv.width=cw; cv.height=chh;
@@ -1514,7 +1480,7 @@ function passGood(codes){
 }
 
 /* 主流程：灰度标准版面 → 二值增强 → 稀疏版面；命中即可信结果就收工 */
-let lastOcrFile=null;
+let lastOcrFile=null, ocrAbort=false;
 
 /* 引擎脚本加载失败时的可操作提示（不静默） */
 function ocrEngineFail(stEl){
@@ -1537,6 +1503,7 @@ function closeOCR(){ const el=document.getElementById('ocrLoad'); if(el)el.class
 async function processImage(imageFile){
   if(isOcrRunning)return;
   isOcrRunning=true;
+  ocrAbort=false;
   lastOcrFile=imageFile;
   var loadEl=document.getElementById('ocrLoad'), stEl=document.getElementById('ocrSt');
   loadEl.classList.add('show');
@@ -1557,6 +1524,7 @@ async function processImage(imageFile){
       if(key==='gray') imgBlob=pp.gray; else imgBlob=await pp.binFn();
       if(!imgBlob) continue;
       if(pi>0 && Date.now()-t0>22000) break;
+      if(ocrAbort) break;
       ocrPhase='识别中·'+PASSES[pi][2];
       stEl.textContent=ocrPhase+'...';
       try{ await worker.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:PASSES[pi][1]}); }catch(e){}
@@ -1577,9 +1545,22 @@ async function processImage(imageFile){
     }
     showOcrResults(bestCodes,bestText||lastText);
   }catch(err){
-    stEl.textContent='识别失败: '+(err&&err.message?err.message:err);
+    if(ocrAbort){ ocrAbort=false; return; }
+    stEl.textContent='';
+    const box=document.createElement('div');
+    box.style.textAlign='center';
+    const msg=document.createElement('div');
+    msg.style.cssText='font-size:14.5px;font-weight:700;color:var(--tx-1);line-height:1.7';
+    msg.innerHTML='😕 识别失败<br><span style="font-size:12.5px;font-weight:500;color:var(--tx-2)"></span>';
+    msg.lastChild.textContent=String(err&&err.message?err.message:err);
+    const rb=document.createElement('button');
+    rb.className='ocr-cancel'; rb.style.marginTop='14px'; rb.textContent='重试';
+    rb.onclick=function(){ if(lastOcrFile) processImage(lastOcrFile); };
+    box.appendChild(msg); box.appendChild(rb);
+    stEl.appendChild(box);
   }finally{
     isOcrRunning=false;
+    ocrAbort=false;
   }
 }
 
@@ -1700,8 +1681,7 @@ h+=`<div class="ocr-item"><div><div class="ocr-code">${esc(c.code)}</div><div cl
 function copyRaw(){
   const el=document.getElementById('rawBox');
   if(!el)return;
-  const t=el.textContent;
-  navigator.clipboard.writeText(t).then(()=>toast('原文已复制')).catch(()=>toast('复制失败'));
+  copyText(el.textContent).then(function(){ toast('原文已复制'); }).catch(function(){ toast('复制失败'); });
 }
 
 
@@ -1729,14 +1709,18 @@ function qAddAll(list){
   toast('已添加 '+list.length+' 个取件码');
 }
 
-function cancelOCR(){document.getElementById('ocrLoad').classList.remove('show');toast('已取消');}
+function cancelOCR(){
+  ocrAbort=true;
+  document.getElementById('ocrLoad').classList.remove('show');
+  toast('已取消');
+}
 
 function openStats(){
   const total=items.length,picked=items.filter(i=>i.pickedUp).length,active=total-picked;
-  const today=new Date().toDateString(),tc=items.filter(i=>new Date(i.id).toDateString()===today).length;
+  const today=new Date().toDateString(),tc=items.filter(i=>new Date(i.ts||i.id).toDateString()===today).length;
   const ss={};items.forEach(i=>{if(i.station)ss[i.station]=(ss[i.station]||0)+1;});
   const top=Object.entries(ss).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('statsCt').innerHTML=`<div class="sgrid"><div class="sc"><div class="n">${total}</div><div class="l">总快递数</div></div><div class="sc"><div class="n">${active}</div><div class="l">待取快递</div></div><div class="sc"><div class="n">${picked}</div><div class="l">已取快递</div></div><div class="sc"><div class="n">${tc}</div><div class="l">今日新增</div></div></div>${top.length?`<div class="sec-t">驿站包裹排行</div><div class="rk">${top.map(n=>`<div class="rk-row"><span class="nm">📍 ${n[0]}</span><span class="ct">${n[1]} 件</span></div>`).join('')}</div>`:''}`;
+  document.getElementById('statsCt').innerHTML=`<div class="sgrid"><div class="sc"><div class="n">${total}</div><div class="l">总快递数</div></div><div class="sc"><div class="n">${active}</div><div class="l">待取快递</div></div><div class="sc"><div class="n">${picked}</div><div class="l">已取快递</div></div><div class="sc"><div class="n">${tc}</div><div class="l">今日新增</div></div></div>${top.length?`<div class="sec-t">驿站包裹排行</div><div class="rk">${top.map(n=>`<div class="rk-row"><span class="nm">📍 ${esc(n[0])}</span><span class="ct">${n[1]} 件</span></div>`).join('')}</div>`:''}`;
   document.getElementById('statsMo').classList.add('show');
 }
 function closeStats(){document.getElementById('statsMo').classList.remove('show');}
@@ -1750,12 +1734,15 @@ function saveSettings(){
   const stText=document.getElementById('iStas').value.trim();
   stations=stText.split('\n').map(s=>s.trim()).filter(Boolean);
   saveStas();
+  /* 当前标签指向已删除的驿站时回落到「全部」，否则列表会一直空 */
+  if(curTab!=='全部' && stations.indexOf(curTab)<0) curTab='全部';
   closeSettings();toast('已保存');
+  renderCards();
 }
 
 function exportData(){
   const data=JSON.stringify({items,stations,version:2});
-  navigator.clipboard.writeText(data).then(()=>toast('数据已复制')).catch(()=>{const ta=document.createElement('textarea');ta.value=data;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('数据已复制');});
+  copyText(data).then(function(){ toast('数据已复制'); }).catch(function(){ toast('复制失败'); });
 }
 function importData(){
   const text=document.getElementById('iImport').value.trim();
@@ -1771,8 +1758,10 @@ function importData(){
 }
 function doImport(data){
   try{
-    items=data.items;save();
-    if(data.stations&&Array.isArray(data.stations)){stations=data.stations;saveStas();}
+    items=Array.isArray(data.items)?data.items:[];
+    save();
+    if(data.stations&&Array.isArray(data.stations)){ stations=data.stations; saveStas(); }
+    if(curTab!=='全部' && stations.indexOf(curTab)<0) curTab='全部';
     renderCards();closeSettings();toast('导入成功！共'+items.length+'条');
   }catch(e){toast('格式错误');}
 }
