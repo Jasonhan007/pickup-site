@@ -1004,12 +1004,14 @@ const NEG_CTX='订单编号|订单号|运单号|快递单号|物流单号|单号
 /* 关键词与码值之间允许出现的间隔。除标点/空格外，还需容忍少量汉字连接词——
    短信里"取件码是 XXX""取件码为 XXX""取件码如下：XXX"都非常常见，
    若只允许标点，这些写法会整条漏掉。连接词白名单化可避免跨越整句乱抓。 */
-const CODE_GAP='[\\s:：,，.。、;；\\-—–的是为如共您请等下的]{0,6}';
+const CODE_GAP='[\\s:：,，.。、;；\\-—–的是为如共您请等下的分别和与计各包括并次均含有到\\u3001]{0,8}';
 const CODE_TOKEN='([A-Za-z0-9][A-Za-z0-9\\-—–]{1,17})';
 
 /* 把 OCR 断行的码值拼回：仅黏合字母数字/连字符边界，不合并整句中文 */
 function glueSplitCodes(text){
-  return String(text||'').replace(/([A-Za-z0-9][\-—–]?)[\r\n]+(?=[A-Za-z0-9])/g,'$1');
+  /* 仅当上一行以连字符结尾（码被截断，如 "307-1-\n1009"）才跨行拼接；
+     否则会把多行取件清单 "501\n2-3-108" 误黏成一个超长假码。 */
+  return String(text||'').replace(/([A-Za-z0-9])[\-—–][\r\n]+(?=[A-Za-z0-9])/g,'$1-');
 }
 
 /* OCR 常把字母与数字拆开（"A 8-2-3071"）：先拼回再匹配，否则首字母会丢 */
@@ -1036,16 +1038,42 @@ function parseText(text){
   const negRe=new RegExp(NEG_CTX);
 
   const lines=glued.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  /* 取件码邻域：关键词行向前 ±2 行、并向后延续的「短行块」都算——
+     取件清单往往只有首行带关键词，后面的码值行按弱规则会整片漏检 */
+  const keyRe=new RegExp(CODE_KEY);
+  const near=new Array(lines.length).fill(false);
+  for(let i=0;i<lines.length;i++){
+    if(!keyRe.test(lines[i]))continue;
+    for(let j=Math.max(0,i-2);j<i;j++) near[j]=true;
+    near[i]=true;
+    for(let j=i+1;j<lines.length;j++){
+      const L=lines[j];
+      if(L.length>28) break;                 /* 长句 → 清单结束 */
+      if(/[。！？；;]/.test(L)) break;        /* 完整句 → 清单结束 */
+      near[j]=true;
+    }
+  }
   const out=[],seen=new Set();
   let curCourier='',curStation='';
 
-  const push=(rawLine,ctx,strong)=>{
-    if(out.length>=16)return false;
+  /* strong：关键词邻接；relax：处于取件码邻域（放宽长度，仍过 isNoise） */
+  const push=(rawLine,ctx,strong,relax)=>{
+    if(out.length>=24)return false;
     const code=normalizeCode(rawLine);
     if(!code||phoneLike.has(code))return false;
-    if(isNoise(code,ctx,!!strong))return false;
+    if(isNoise(code,ctx,!!strong||!!relax))return false;
     if(seen.has(code))return false;
-    if(!strong && code.indexOf('-')>=0 && code.replace(/-/g,'').length<6) return false;
+    const hy=code.indexOf('-')>=0;
+    const digits=code.replace(/[^0-9]/g,'').length;
+    if(!strong&&!relax){
+      /* 无任何上下文：形状必须足够像码 */
+      if(hy&&digits<6)return false;
+      if(!hy&&code.length<5)return false;
+    }else if(relax&&!strong){
+      /* 邻域内：允许短码，但仍要求有连字符或 ≥4 位，避免把散数当码 */
+      if(hy&&digits<3)return false;
+      if(!hy&&code.length<4)return false;
+    }
     seen.add(code);
     const ct=ctx||'';
     out.push({
@@ -1058,11 +1086,12 @@ function parseText(text){
     return true;
   };
 
-  for(const line of lines){
-    const cl=rejoinAlnum(cleanCJK(line));
+  for(let li=0;li<lines.length;li++){
+    const cl=rejoinAlnum(cleanCJK(lines[li]));
     const cr0=matchCourier(cl); if(cr0) curCourier=cr0;
     const st0=matchStation(cl); if(st0) curStation=st0;
 
+    const relax=!!near[li];
     const re1=new RegExp('(?:'+CODE_KEY+')'+CODE_GAP+CODE_TOKEN,'g');
     let m,keywordHit=false,firstEnd=-1;
     while((m=re1.exec(cl))!==null){
@@ -1079,7 +1108,7 @@ function parseText(text){
         const before=rest[mm.index-1]||'', after=rest[mm.index+mm[1].length]||'';
         if(before===':'||after===':')continue;
         if(rest.indexOf('*')>=0)continue;
-        if(push(mm[1],cl,true)) keywordHit=true;
+        if(push(mm[1],cl,true,relax)) keywordHit=true;
       }
     }
 
@@ -1089,11 +1118,12 @@ function parseText(text){
       const beforeChar=cl[m.index-1]||'', afterChar=cl[m.index+raw.length]||'';
       if(beforeChar===':'||afterChar===':')continue;
       if(negRe.test(cl) && raw.replace(/-/g,'').length>10) continue;
-      if(!keywordHit && raw.replace(/[^0-9]/g,'').length<6) continue;
-      push(raw,cl,!keywordHit);
+      if(!keywordHit && !relax && raw.replace(/[^0-9]/g,'').length<6) continue;
+      push(raw,cl,!keywordHit,relax);
     }
 
-    if(!keywordHit){
+    /* 策略3 也必须校验负向上下文：否则「取件码\n订单号 12345678」会把单号当码 */
+    if(!keywordHit && !negRe.test(cl)){
       const alnum=cl.replace(/[^A-Za-z0-9]/g,'');
       if((cl.match(/\d/g)||[]).length>=3&&alnum.length<=12){
         const re3=/\b([A-Z]{0,2}\d{5,8})\b/g;
@@ -1486,7 +1516,12 @@ async function processImage(imageFile){
       const found=parseText(text);
       const sc=codeScore(found,conf);
       if(sc>bestScore){ bestScore=sc; bestCodes=found; bestText=text; bestWords=ocrWords(data); }
-      if(passGood(found)) break;
+      /* 早停收紧：只有「带连字符」且**已含字母**才立即收工。
+         若结果是纯数字码，中文引擎很可能刚吞掉首字母（A→及）——再跑一版（最多2版）
+         找回字母的机会更大，找不到再交给 refineCode 兜底。 */
+      if(passGood(found)){
+        if(hasLetter(found[0].code) || pi>=1) break;
+      }
     }
     if(bestCodes.length){
       const refined=await refineCode(bestCodes[0].code,bestWords,pp.canvas);
