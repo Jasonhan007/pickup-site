@@ -119,28 +119,6 @@ body{
 .hdr-r button:active{ transform:scale(.88); background:var(--accent-soft); }
 .hdr-r button:focus-visible{ outline:2.5px solid var(--accent); outline-offset:2px; }
 
-/* ---- 搜索 ---- */
-.search-bar{
-  display:none; align-items:center; gap:8px;
-  margin:12px 16px 4px; padding:10px 16px;
-  background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-full);
-}
-.search-bar:focus-within{ border-color:var(--accent); background:var(--surface-2); }
-.search-bar .ic{ font-size:15px; color:var(--tx-3); flex-shrink:0; }
-.search-bar input{
-  flex:1; border:none; background:transparent; font-size:14.5px; color:var(--tx-1);
-  outline:none; font-family:inherit; letter-spacing:-.012em;
-}
-.search-bar input::placeholder{ color:var(--tx-3); }
-.search-bar input::-webkit-search-cancel-button{ display:none; }
-.search-clear{
-  width:26px; height:26px; border-radius:50%; border:none; background:var(--sunken);
-  color:var(--tx-2); display:none; align-items:center; justify-content:center;
-  font-size:11px; cursor:pointer; flex-shrink:0;
-  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
-}
-.search-clear:active{ transform:scale(.9); background:var(--sunken-2); }
-
 /* ---- 标签 ---- */
 .tabs{
   display:flex; padding:var(--s3) var(--s4) var(--s2); gap:8px; overflow-x:auto;
@@ -468,11 +446,6 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 
 <div id="listV">
   <input type="file" id="fi" accept="image/*" onchange="handleFile(event)" style="display:none">
-  <div class="search-bar" id="searchBar">
-    <span class="ic">🔍</span>
-    <input type="search" id="searchInput" placeholder="搜索取件码 / 驿站 / 公司" oninput="onSearch()">
-    <button class="search-clear" onclick="clearSearch()" aria-label="清除">✕</button>
-  </div>
   <div class="ocr-load" id="ocrLoad">
     <div class="sp"></div>
     <div class="st" id="ocrSt">加载中...</div>
@@ -547,7 +520,6 @@ let items=JSON.parse(localStorage.getItem('puItems')||'[]');
 const DEFAULT_STATIONS=["北门美食广场","理工大学桂轩快递站","1栋","食堂","沙宣"];
 let stations=JSON.parse(localStorage.getItem('puStas')||JSON.stringify(DEFAULT_STATIONS));
 let curTab='全部',editId=null,worker=null,curC='';
-let searchQ='';
 
 /* 默认驿站同步（单一入口，替代原先的 pruneLegacy + migrate 两段）：
    1. 移除已废弃的预置项——仅当该项名下无快递数据时移除，保护已有数据；
@@ -582,22 +554,9 @@ function timeLabel(i){ return i.ts?relTime(i.ts):(i.time||''); }
 function renderStaTabs(){
   const used=new Set(items.map(i=>i.station).filter(Boolean));
   const tabs=['全部',...stations.filter(s=>used.has(s))];
-  document.getElementById('staTabs').innerHTML=tabs.map(s=>`<button class="tab${curTab===s?' on':''}" onclick="setStTab(${JSON.stringify(s)})">${esc(s)}</button>`).join('');
+  document.getElementById('staTabs').innerHTML=tabs.map(s=>`<button class="tab${curTab===s?' on':''}" onclick="setStTab(${esc(JSON.stringify(s))})">${esc(s)}</button>`).join('');
 }
 function setStTab(t){curTab=t;renderCards();}
-
-function onSearch(){
-  const el=document.getElementById('searchInput');
-  searchQ=(el?el.value:'').trim().toLowerCase();
-  document.querySelector('.search-clear').style.display=searchQ?'flex':'none';
-  renderCards();
-}
-function clearSearch(){
-  searchQ='';
-  const el=document.getElementById('searchInput'); if(el)el.value='';
-  const btn=document.querySelector('.search-clear'); if(btn)btn.style.display='none';
-  renderCards();
-}
 
 function renderCrpRow(){
   document.getElementById('crpRow').innerHTML=COURIERS.map(c=>`<div class="crp-btn${curC===c?' on':''}" onclick="setCrp('${c}')"><span class="crp-t${curC===c?' on':''}">${c}</span></div>`).join('');
@@ -605,7 +564,7 @@ function renderCrpRow(){
 function setCrp(c){curC=curC===c?'':c;renderCrpRow();}
 
 function renderStPick(){
-  document.getElementById('staPick').innerHTML=stations.map(s=>`<div class="sp-btn" onclick="document.getElementById('iStation').value=${JSON.stringify(s)}">${esc(s)}</div>`).join('');
+  document.getElementById('staPick').innerHTML=stations.map(s=>`<div class="sp-btn" onclick="document.getElementById('iStation').value=${esc(JSON.stringify(s))}">${esc(s)}</div>`).join('');
 }
 
 function openModal(id){
@@ -735,16 +694,8 @@ function cleanupPicked(){
 }
 
 function renderCards(){
-  /* 控制搜索栏显隐 */
-  const sb=document.getElementById('searchBar');
-  if(sb) sb.style.display=items.length?'flex':'none';
-
   let f=items;
   if(curTab!=='全部') f=f.filter(i=>i.station===curTab);
-  if(searchQ){
-    const q=searchQ.toLowerCase();
-    f=f.filter(i=>(i.code+i.courier+i.station).toLowerCase().includes(q));
-  }
   /* 排序：未取优先，同状态下新的在前 */
   f=f.slice().sort((a,b)=>{
     if(a.pickedUp!==b.pickedUp) return a.pickedUp?1:-1;
@@ -755,10 +706,8 @@ function renderCards(){
   const el=document.getElementById('cardList');
   if(!f.length){
     let html='';
-    if(searchQ){
-      html='<div class="empty"><div class="empty-ring">🔍</div><div class="empty-t">没有匹配的快递</div><div class="empty-s">换个关键词试试</div></div>';
-    }else if(items.length){
-      html='<div class="empty"><div class="empty-ring">📭</div><div class="empty-t">该驿站暂无快递</div><div class="empty-s">切换上方标签或搜索其他内容</div></div>';
+    if(items.length){
+      html='<div class="empty"><div class="empty-ring">📭</div><div class="empty-t">该驿站暂无快递</div><div class="empty-s">切换上方标签，或点右下角继续添加</div></div>';
     }else{
       html='<div class="empty"><div class="empty-ring">📦</div><div class="empty-t">还没有快递</div><div class="empty-s">截图识别取件码，或手动录入<br>包裹信息会自动归类和排序</div><button class="empty-act" onclick="document.getElementById(\'fi\').click()">📸 开始识别</button></div>';
     }
@@ -770,7 +719,7 @@ function renderCards(){
     /* 用户可控字段（code/station/courier）一律转义；onclick 中的码值用 JSON.stringify，
        否则含引号的码会截断内联脚本，导致复制功能失效 */
     const codeJs=JSON.stringify(String(i.code==null?'':i.code));
-    return `<div class="cd${i.pickedUp?' picked':''}" style="--corp:${color};animation-delay:${Math.min(n,12)*20}ms"><div class="cd-hd"><span class="cd-corp"><span class="badge" style="--c:${color}">${esc(i.courier||'快递')}</span><span class="loc">📍 ${esc(i.station||'未指定驿站')}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="copyCode(${codeJs})">${esc(i.code)}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
+    return `<div class="cd${i.pickedUp?' picked':''}" style="--corp:${color};animation-delay:${Math.min(n,12)*20}ms"><div class="cd-hd"><span class="cd-corp"><span class="badge" style="--c:${color}">${esc(i.courier||'快递')}</span><span class="loc">📍 ${esc(i.station||'未指定驿站')}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="copyCode(${esc(codeJs)})">${esc(i.code)}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
   }).join('');
 }
 
@@ -1589,7 +1538,7 @@ function confirmStations(names,onDone){
   let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>发现新驿站</h3><span class="ocr-done" onclick="closeStationDialog()">跳过</span></div>';
   h+='<div style="font-size:13.5px;color:var(--tx-3);line-height:1.55;margin-bottom:12px;letter-spacing:-.01em">是否添加到驿站列表？添加后会出现在顶部标签栏，方便分类查看。</div>';
   names.forEach(n=>{
-    h+=`<div class="ocr-item"><div style="min-width:0"><div class="ocr-code" style="font-size:15.5px">${esc(n)}</div></div><button class="ocr-add" onclick="acceptStation(this,${JSON.stringify(String(n))})">添加</button></div>`;
+    h+=`<div class="ocr-item"><div style="min-width:0"><div class="ocr-code" style="font-size:15.5px">${esc(n)}</div></div><button class="ocr-add" onclick="acceptStation(this,${esc(JSON.stringify(String(n)))})">添加</button></div>`;
   });
   h+='<button class="set-btn solid" style="margin-top:12px" onclick="acceptAllStations()">全部添加</button>';
   h+='<button class="set-btn ghost" style="margin-top:8px;margin-bottom:0" onclick="closeStationDialog()">全部跳过</button>';
@@ -1666,10 +1615,10 @@ function renderOcrPanel(codes,raw){
   codes.forEach(c=>{
     const info=[c.courier,c.station].filter(Boolean).join(' · ');
     const args=[c.code,c.courier||'',c.station||''].map(x=>JSON.stringify(String(x==null?'':x))).join(',');
-h+=`<div class="ocr-item"><div><div class="ocr-code">${esc(c.code)}</div><div class="ocr-meta">${esc(info||'未识别驿站')}</div></div><button class="ocr-add" onclick="qAdd(${args});this.textContent='已添加';this.classList.add('done');this.disabled=true;">添加</button></div>`;
+h+=`<div class="ocr-item"><div><div class="ocr-code">${esc(c.code)}</div><div class="ocr-meta">${esc(info||'未识别驿站')}</div></div><button class="ocr-add" onclick="qAdd(${esc(args)});this.textContent='已添加';this.classList.add('done');this.disabled=true;">添加</button></div>`;
   });
   const all=JSON.stringify(codes.map(c=>({c:String(c.code||''),r:c.courier||'',s:c.station||''})));
-  h+='<button class="set-btn solid" style="margin-top:12px" onclick="qAddAll('+all+')">全部添加（'+codes.length+'）</button>';
+  h+='<button class="set-btn solid" style="margin-top:12px" onclick="qAddAll('+esc(all)+')">全部添加（'+codes.length+'）</button>';
   if(raw.trim()){
     h+='<button class="set-btn ghost" style="margin-top:10px;margin-bottom:8px" onclick="toggleRaw(this)">查看识别原文</button>';
     h+='<div class="raw-box" style="display:none">'+esc(raw.trim())+'</div>';
