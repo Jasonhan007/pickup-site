@@ -85,6 +85,18 @@ body{
 .hdr.is-scrolled{ background:rgba(255,247,242,.97); box-shadow:var(--sh-2); }
 @media (prefers-color-scheme: dark){ .hdr.is-scrolled{ background:rgba(38,29,26,.97); } }
 
+/* 版本号：右上角小圆角徽标，仅用于确认是否已更新 */
+.ver{
+  position:absolute; right:10px; top:calc(var(--safe-t) + 4px); z-index:3;
+  font-size:10px; font-weight:800; line-height:1.4; letter-spacing:.04em;
+  font-family:ui-rounded,-apple-system,BlinkMacSystemFont,'SF Pro Rounded','PingFang SC',sans-serif;
+  color:var(--tx-2); background:var(--surface-2);
+  border:1.5px dashed var(--hairline); border-radius:var(--r-full);
+  padding:2px 8px; pointer-events:none;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  -webkit-user-select:none; user-select:none;
+}
+
 .hdr > img{
   display:block; margin:0 auto 8px; width:auto;
   max-width:min(100%,290px); max-height:138px; object-fit:contain;
@@ -434,6 +446,7 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 
 
 <div class="hdr">
+  <span class="ver" title="版本号，用于确认是否已更新">v1.0</span>
   <img src="header.png" alt="" onerror="this.style.display='none'">
   <div class="hdr-t">
     <h1><img src="bear1.png" alt=""><span>熊熊驿站</span><img src="bear2.png" alt=""></h1>
@@ -751,9 +764,19 @@ function newId(){ lastId=Math.max(Date.now(),lastId+1); return lastId; }
 
 /* 快递公司词典：具体承运商优先；OCR 常见错字一并收录 */
 const CM_MAIN=[['极兔','极兔'],['极免','极兔'],['圆通','圆通'],['中通','中通'],['韵达','韵达'],['申通','申通'],['顺丰','顺丰'],['京东','京东'],['邮政EMS','邮政EMS'],['邮政','邮政EMS'],['EMS','邮政EMS'],['德邦','德邦']];
+/* 运单号前缀 → 快递公司（公司名被 OCR 认烂时的兜底，取自真实截图 YT/SF 等） */
+const WAYBILL={YT:'圆通',SF:'顺丰',ZTO:'中通',JT:'极兔',JD:'京东',YD:'韵达',STO:'申通',EMS:'邮政EMS'};
 function matchCourier(text){
   if(!text)return'';
-  for(const[k,v]of CM_MAIN)if(text.includes(k))return v;
+  /* 取「最早出现」的那个公司名：混合文本里字典序会选错（圆通/中通同屏时） */
+  let best='',pos=1e9;
+  for(const[k,v]of CM_MAIN){
+    const p=text.indexOf(k);
+    if(p>=0&&p<pos){ pos=p; best=v; }
+  }
+  if(best)return best;
+  const wb=/\b(YT|SF|ZTO|JT|JD|YD|STO|EMS)[0-9]{8,}/i.exec(text);
+  if(wb)return WAYBILL[wb[1].toUpperCase()]||'';
   return'';
 }
 
@@ -1053,11 +1076,21 @@ function parseText(text){
       near[j]=true;
     }
   }
+  /* 每行的快递公司：码归属时向前后各找 2 行（截图里公司常写在码的下一行） */
+  const lineCur=lines.map(function(l){ return matchCourier(rejoinAlnum(cleanCJK(l))); });
   const out=[],seen=new Set();
   let curCourier='',curStation='';
+  const courierOf=function(li,ctx){
+    if(li!=null&&lineCur[li])return lineCur[li];
+    for(const d of [1,-1,2,-2]){
+      const j=li==null?-1:li+d;
+      if(j>=0&&j<lineCur.length&&lineCur[j])return lineCur[j];
+    }
+    return matchCourier(ctx||'')||curCourier||globalCourier;
+  };
 
   /* strong：关键词邻接；relax：处于取件码邻域（放宽长度，仍过 isNoise） */
-  const push=(rawLine,ctx,strong,relax)=>{
+  const push=(rawLine,ctx,strong,relax,li)=>{
     if(out.length>=24)return false;
     const code=normalizeCode(rawLine);
     if(!code||phoneLike.has(code))return false;
@@ -1078,7 +1111,7 @@ function parseText(text){
     const ct=ctx||'';
     out.push({
       code:code,
-      courier:matchCourier(ct)||curCourier||globalCourier,
+      courier:courierOf(li,ct),
       station:matchStation(ct)||curStation||globalStation,
       _s:strong?1:0,
       _i:out.length
@@ -1098,7 +1131,7 @@ function parseText(text){
       const raw=m[1];
       if(firstEnd<0) firstEnd=re1.lastIndex;
       if(negRe.test(cl) && /\d{5,}/.test(raw)) continue;
-      if(push(raw,cl,true)) keywordHit=true;
+      if(push(raw,cl,true,relax,li)) keywordHit=true;
     }
     if(firstEnd>=0){
       const rest=cl.slice(firstEnd);
@@ -1108,7 +1141,7 @@ function parseText(text){
         const before=rest[mm.index-1]||'', after=rest[mm.index+mm[1].length]||'';
         if(before===':'||after===':')continue;
         if(rest.indexOf('*')>=0)continue;
-        if(push(mm[1],cl,true,relax)) keywordHit=true;
+        if(push(mm[1],cl,true,relax,li)) keywordHit=true;
       }
     }
 
@@ -1119,15 +1152,28 @@ function parseText(text){
       if(beforeChar===':'||afterChar===':')continue;
       if(negRe.test(cl) && raw.replace(/-/g,'').length>10) continue;
       if(!keywordHit && !relax && raw.replace(/[^0-9]/g,'').length<6) continue;
-      push(raw,cl,!keywordHit,relax);
+      push(raw,cl,!keywordHit,relax,li);
     }
 
     /* 策略3 也必须校验负向上下文：否则「取件码\n订单号 12345678」会把单号当码 */
+    /* 策略 2b：码在关键词之前（"307-1-1009 取件码已查"），关键词邻接按高置信处理 */
+    if(!negRe.test(cl)){
+      const re2b=new RegExp(CODE_TOKEN+'[\\s\\S]{0,4}(?:'+CODE_KEY+')','g');
+      let mb;
+      while((mb=re2b.exec(cl))!==null){
+        const rawb=mb[1];
+        const bb=cl[mb.index-1]||'', ab=cl[mb.index+rawb.length]||'';
+        if(bb===':'||ab===':')continue;
+        if(!relax && rawb.replace(/[^0-9]/g,'').length<6 && rawb.indexOf('-')<0) continue;
+        if(push(rawb,cl,true,relax,li)) keywordHit=true;
+      }
+    }
+
     if(!keywordHit && !negRe.test(cl)){
       const alnum=cl.replace(/[^A-Za-z0-9]/g,'');
       if((cl.match(/\d/g)||[]).length>=3&&alnum.length<=12){
         const re3=/\b([A-Z]{0,2}\d{5,8})\b/g;
-        while((m=re3.exec(cl))!==null) push(m[1],cl,false);
+        while((m=re3.exec(cl))!==null) push(m[1],cl,false,false,li);
       }
     }
   }
