@@ -65,7 +65,6 @@ body{
     radial-gradient(circle at 50% 102%, rgba(99,197,140,.16), transparent 44%);
   background-repeat: repeat, no-repeat, no-repeat, no-repeat;
   background-size: 72px 72px, auto, auto, auto;
-  background-attachment:fixed;
   min-height:100vh; min-height:100dvh; color:var(--tx-1);
   padding-bottom:calc(var(--safe-b) + 126px);
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
@@ -74,15 +73,18 @@ body{
 
 /* ---- 顶部 ---- */
 .hdr{
-  background:rgba(255,247,242,.88);
-  backdrop-filter:blur(18px) saturate(170%); -webkit-backdrop-filter:blur(18px) saturate(170%);
+  background:rgba(255,247,242,.86);
+  transform:translateZ(0);  /* 提升为独立合成层，滚动不重绘 */
   padding:calc(var(--safe-t) + 10px) var(--s4) 12px; text-align:center;
   position:sticky; top:0; z-index:100;
   border-bottom:2px dashed var(--hairline);
   transition:background var(--t-2) var(--ease-io), box-shadow var(--t-2) var(--ease-io);
 }
 @media (prefers-color-scheme: dark){ .hdr{ background:rgba(35,27,24,.9); } }
-.hdr.is-scrolled{ background:rgba(255,247,242,.97); box-shadow:var(--sh-2); }
+.hdr.is-scrolled{
+  background:rgba(255,247,242,.97); box-shadow:var(--sh-2);
+  backdrop-filter:blur(16px) saturate(170%); -webkit-backdrop-filter:blur(16px) saturate(170%);
+}
 @media (prefers-color-scheme: dark){ .hdr.is-scrolled{ background:rgba(38,29,26,.97); } }
 
 /* 版本号：右上角小圆角徽标，仅用于确认是否已更新 */
@@ -159,9 +161,9 @@ body{
   box-shadow:inset 5px 0 0 var(--corp,transparent), var(--sh-1);
   touch-action:manipulation; position:relative; overflow:hidden;
   transition:transform var(--t-1) var(--ease-out), box-shadow var(--t-2) var(--ease-out), opacity var(--t-2) var(--ease-out);
-  animation:cardIn var(--t-3) var(--ease-out) backwards;
+  animation:cardIn 260ms var(--ease-out) backwards;
 }
-@keyframes cardIn{ from{opacity:0; transform:translateY(10px) scale(.98)} to{opacity:1; transform:none} }
+@keyframes cardIn{ from{opacity:0; transform:translateY(8px) scale(.99)} to{opacity:1; transform:none} }
 .cd::after{
   content:''; position:absolute; right:-14px; bottom:-16px; width:78px; height:78px;
   border-radius:50%; background:var(--accent-soft); opacity:.55; pointer-events:none;
@@ -202,35 +204,99 @@ body{
 }
 
 /* ---- 悬浮按钮 ---- */
-.fab-wrap{
-  position:fixed; left:0; right:0; bottom:calc(var(--safe-b) + 16px); z-index:100;
-  display:flex; justify-content:center; padding:0 var(--s4); pointer-events:none;
+@keyframes fabIn{ from{opacity:0; transform:translateY(22px)} to{opacity:1; transform:none} }
+
+/* ============================================================
+   底部 dock · iOS Liquid Glass
+   半透明磨砂 + 顶部高光 + 内嵌轮廓光 + 中间凸起圆形相机键
+   ============================================================ */
+.dock{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:calc(var(--safe-b) + 14px); z-index:100;
+  display:flex; align-items:center; gap:7px; padding:7px;
+  border-radius:var(--r-full);
+  background:linear-gradient(155deg, rgba(255,255,255,.58), rgba(255,255,255,.28));
+  transform:translateZ(0);   /* 合成层，滚动时不触发重绘 */
+  -webkit-backdrop-filter:blur(26px) saturate(190%) brightness(1.05);
+  backdrop-filter:blur(26px) saturate(190%) brightness(1.05);
+  border:.5px solid rgba(255,255,255,.62);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.35),
+    inset 0 0 .5px rgba(255,255,255,.55),
+    0 8px 26px rgba(70,50,40,.20),
+    0 2px 6px rgba(70,50,40,.10);
+  pointer-events:auto;
   animation:fabIn var(--t-3) var(--ease-spring) backwards; animation-delay:.1s;
 }
-@keyframes fabIn{ from{opacity:0; transform:translateY(22px)} to{opacity:1; transform:none} }
-.fab{
-  pointer-events:auto; display:flex; align-items:center; gap:8px;
-  background:var(--surface-2); border:2px solid rgba(255,255,255,.9);
-  border-radius:var(--r-full); padding:7px; box-shadow:var(--sh-3);
+/* 玻璃表面的流光高光带 */
+.dock::before{
+  content:''; position:absolute; top:1px; left:9%; right:9%; height:42%;
+  border-radius:var(--r-full);
+  background:linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,0));
+  pointer-events:none;
 }
-.fab button{
-  display:flex; align-items:center; gap:6px; border:none; background:var(--sunken);
-  color:var(--tx-1); font-size:14px; font-weight:700; padding:12px 17px; border-radius:var(--r-full);
-  cursor:pointer; font-family:inherit; letter-spacing:-.015em; touch-action:manipulation; min-height:46px;
-  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
+.dk{
+  position:relative; z-index:1;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  border:none; background:transparent; color:var(--tx-1);
+  font-family:inherit; font-size:12.5px; font-weight:800; letter-spacing:-.01em;
+  padding:8px 15px; min-width:76px; min-height:50px; border-radius:var(--r-full);
+  cursor:pointer; touch-action:manipulation;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), color var(--t-1) var(--ease-out), box-shadow var(--t-2) var(--ease-out);
 }
-.fab button:active{ transform:scale(.94); background:var(--sunken-2); }
-.fab button.primary{
-  background:linear-gradient(135deg,var(--accent),var(--accent-hi)); color:#fff;
-  box-shadow:0 4px 14px rgba(255,143,176,.36); padding:12px 21px;
-  animation:glow 2.8s var(--ease-io) infinite;
+.dk .dk-i{ font-size:15px; line-height:1.1; }
+.dk:active{ transform:scale(.93); }
+.dk.on{
+  background:linear-gradient(145deg, rgba(255,143,176,.95), rgba(255,158,178,.78));
+  color:#fff;
+  box-shadow:0 4px 14px rgba(255,143,176,.42), inset 0 1px 0 rgba(255,255,255,.55);
 }
-@keyframes glow{
-  0%,100%{ box-shadow:0 4px 14px rgba(255,143,176,.36); }
-  50%{ box-shadow:0 4px 22px rgba(255,143,176,.62); }
+.dk:focus-visible{ outline:2.5px solid var(--accent); outline-offset:2px; }
+
+/* 中间凸起的相机键（玻璃泡泡） */
+.dk-cam{
+  position:relative; z-index:1;
+  width:54px; height:54px; border-radius:50%; flex-shrink:0;
+  border:.5px solid rgba(255,255,255,.75);
+  background:linear-gradient(150deg, rgba(255,255,255,.72), rgba(255,255,255,.34));
+  font-size:23px; line-height:1; cursor:pointer; touch-action:manipulation;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,.95),
+    inset 0 -1.5px 0 rgba(255,255,255,.4),
+    0 6px 16px rgba(70,50,40,.24), 0 1px 3px rgba(70,50,40,.12);
+  transition:transform var(--t-1) var(--ease-out), box-shadow var(--t-1) var(--ease-out);
 }
-.fab button:focus-visible{ outline:2.5px solid var(--accent); outline-offset:2px; }
-.fab .ic{ font-size:17px; line-height:1; }
+.dk-cam:active{ transform:scale(.9); }
+.dk-cam:focus-visible{ outline:2.5px solid var(--accent); outline-offset:3px; }
+/* 相机键的顶部高光弧 */
+.dk-cam::after{
+  content:''; position:absolute; top:3px; left:20%; right:20%; height:36%;
+  border-radius:50%; background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,0));
+  pointer-events:none;
+}
+@media (prefers-color-scheme: dark){
+  .dock{
+    background:linear-gradient(155deg, rgba(72,60,54,.78), rgba(44,36,32,.55));
+    border-color:rgba(255,255,255,.18);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,.24),
+      inset 0 -1px 0 rgba(255,255,255,.08),
+      inset 0 0 .5px rgba(255,255,255,.14),
+      0 10px 30px rgba(0,0,0,.5);
+  }
+  .dock::before{ background:linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0)); }
+  .dk-cam{
+    background:linear-gradient(150deg, rgba(255,255,255,.2), rgba(255,255,255,.07));
+    border-color:rgba(255,255,255,.24);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,.3),
+      inset 0 -1.5px 0 rgba(255,255,255,.08),
+      0 6px 16px rgba(0,0,0,.5);
+  }
+  .dk-cam::after{ background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,0)); }
+}
 
 /* ---- 弹窗 ---- */
 .mo{
@@ -307,35 +373,6 @@ body{
   font-family:inherit; min-height:36px; transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
 }
 .ocr-cancel:active{ background:var(--sunken-2); transform:scale(.95); }
-
-/* ---- 统计 ---- */
-.sgrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
-.sc{
-  background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-md);
-  padding:18px var(--s4); text-align:center;
-}
-.sc .n{
-  font-size:32px; font-weight:800; letter-spacing:-.03em; line-height:1.1; font-feature-settings:"tnum";
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-}
-.sc .l{ font-size:11.5px; color:var(--tx-2); margin-top:5px; font-weight:700; letter-spacing:.03em; }
-.sec-t{ font-size:12px; color:var(--tx-2); font-weight:800; margin:var(--s5) 0 var(--s2); letter-spacing:.04em; }
-.rk{ background:var(--surface); border:2px dashed var(--hairline); border-radius:var(--r-md); padding:2px var(--s4); }
-.rk-row{
-  display:flex; justify-content:space-between; align-items:center; padding:11px 0;
-  border-bottom:2px dashed var(--hairline); font-size:14.5px;
-}
-.rk-row:last-child{ border-bottom:none; }
-.rk-row .nm{ color:var(--tx-1); font-weight:600; }
-.rk-row .ct{ font-weight:800; color:var(--accent); font-feature-settings:"tnum"; }
-.btn-cl{
-  width:100%; padding:13px; border:none; border-radius:var(--r-sm); font-size:14.5px;
-  color:var(--danger); background:var(--danger-soft); cursor:pointer; margin-top:var(--s3);
-  font-weight:700; font-family:inherit; touch-action:manipulation; min-height:46px;
-  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out);
-}
-.btn-cl:active{ background:rgba(255,122,133,.2); transform:scale(.98); }
 
 /* ---- 确认框 ---- */
 .confirm-c{ max-width:330px; padding:var(--s6) var(--s5) var(--s5); text-align:center; }
@@ -434,7 +471,7 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 
 @media (display-mode: standalone){
   .hdr{ padding-top:calc(var(--safe-t) + 6px); }
-  .fab-wrap{ bottom:calc(var(--safe-b) + 22px); }
+  .dock{ bottom:calc(var(--safe-b) + 24px); }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -446,12 +483,11 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 
 
 <div class="hdr">
-  <span class="ver" title="版本号，用于确认是否已更新">v1.0</span>
+  <span class="ver" title="版本号，用于确认是否已更新">v1.1</span>
   <img src="header.png" alt="" onerror="this.style.display='none'">
   <div class="hdr-t">
     <h1><img src="bear1.png" alt=""><span>熊熊驿站</span><img src="bear2.png" alt=""></h1>
     <div class="hdr-r">
-      <button onclick="openStats()" aria-label="数据概览">📊</button>
       <button onclick="openSettings()" aria-label="设置">⚙️</button>
     </div>
   </div>
@@ -468,34 +504,31 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
   <div class="cl" id="cardList"></div>
 </div>
 
-<div class="fab-wrap" id="fabWrap">
-  <div class="fab">
-    <button onclick="openModal()"><span class="ic">✏️</span>手动添加</button>
-    <button class="primary" onclick="document.getElementById('fi').click()"><span class="ic">📸</span>截图识别</button>
-  </div>
+<div class="dock" id="dock">
+  <button class="dk" id="dkSend" onclick="setPage('send')"><span class="dk-i">📤</span>寄快递</button>
+  <button class="dk-cam" id="dkCam" onclick="document.getElementById('fi').click()" aria-label="图片识别">📷</button>
+  <button class="dk on" id="dkRecv" onclick="setPage('recv')"><span class="dk-i">📥</span>取快递</button>
 </div>
 
 <div class="mo" id="modal">
   <div class="mo-c">
     <h2 id="mTitle">添加快递</h2>
-    <label>取件码</label>
+    <label id="lblCode">取件码</label>
     <textarea id="iCode" class="code-input" rows="2" placeholder="例如：307-1-1009"></textarea>
-    <div class="field-hint">也可直接粘贴整段短信或文案，会自动提取其中的取件码</div>
-    <label>快递公司</label>
-    <div class="crp-row" id="crpRow"></div>
-    <label>驿站</label>
-    <div class="sp-row" id="staPick"></div>
-    <input type="text" id="iStation" placeholder="或手动输入驿站名">
+    <div class="field-hint" id="codeHint">也可直接粘贴整段短信或文案，会自动提取其中的取件码</div>
+    <div id="recvFields">
+      <label>快递公司</label>
+      <div class="crp-row" id="crpRow"></div>
+      <label>驿站</label>
+      <div class="sp-row" id="staPick"></div>
+      <input type="text" id="iStation" placeholder="或手动输入驿站名">
+    </div>
+    <div id="sendFields" style="display:none">
+      <label>快递柜 / 快递站</label>
+      <input type="text" id="iPlace" placeholder="例如：财经学院6栋楼下丰巢柜">
+      <div class="field-hint">识别时会自动填入快递柜名称</div>
+    </div>
     <div class="mo-btns"><button class="bc" onclick="closeModal()">取消</button><button class="bs" onclick="saveItem()">保存</button></div>
-  </div>
-</div>
-
-<div class="mo" id="statsMo">
-  <div class="mo-c">
-    <h2>数据概览</h2>
-    <div id="statsCt"></div>
-    <button class="btn-cl" onclick="cleanupPicked()">清理已取</button>
-    <div class="mo-btns" style="margin-top:10px"><button class="bc" onclick="closeStats()">关闭</button></div>
   </div>
 </div>
 
@@ -533,6 +566,11 @@ let items=JSON.parse(localStorage.getItem('puItems')||'[]');
 const DEFAULT_STATIONS=["北门美食广场","理工大学桂轩快递站","1栋","食堂","沙宣"];
 let stations=JSON.parse(localStorage.getItem('puStas')||JSON.stringify(DEFAULT_STATIONS));
 let curTab='全部',editId=null,worker=null,curC='';
+/* page：recv=取件码页 / send=寄件码页；sends=寄件码列表（本地存储 puSends） */
+let page='recv', modalMode='recv';
+let pageAnim=true;   /* 仅切页/首次渲染播放入场动画，状态变化时不重放 */
+let sends=JSON.parse(localStorage.getItem('puSends')||'[]');
+function saveSends(){ localStorage.setItem('puSends',JSON.stringify(sends)); }
 
 /* 默认驿站同步（单一入口，替代原先的 pruneLegacy + migrate 两段）：
    1. 移除已废弃的预置项——仅当该项名下无快递数据时移除，保护已有数据；
@@ -571,6 +609,18 @@ function renderStaTabs(){
 }
 function setStTab(t){curTab=t;renderCards();}
 
+/* 切换取件码 / 寄件码页面（dock 高亮同步；寄件页隐藏驿站标签） */
+function setPage(p){
+  page=(p==='send')?'send':'recv';
+  const rs=document.getElementById('dkRecv'), sd=document.getElementById('dkSend');
+  if(rs) rs.classList.toggle('on',page==='recv');
+  if(sd) sd.classList.toggle('on',page==='send');
+  const tabs=document.getElementById('staTabs');
+  if(tabs) tabs.style.display=(page==='recv')?'flex':'none';
+  pageAnim=true;
+  renderCards();
+}
+
 function renderCrpRow(){
   document.getElementById('crpRow').innerHTML=COURIERS.map(c=>`<div class="crp-btn${curC===c?' on':''}" onclick="setCrp('${c}')"><span class="crp-t${curC===c?' on':''}">${c}</span></div>`).join('');
 }
@@ -580,29 +630,47 @@ function renderStPick(){
   document.getElementById('staPick').innerHTML=stations.map(s=>`<div class="sp-btn" onclick="document.getElementById('iStation').value=${esc(JSON.stringify(s))}">${esc(s)}</div>`).join('');
 }
 
-function openModal(id){
-  editId=id||null;renderCrpRow();renderStPick();
-  if(editId){
-    const it=items.find(i=>i.id===id);
-    if(!it)return;
-    document.getElementById('mTitle').textContent='编辑快递';
-    document.getElementById('iCode').value=it.code;
-    curC=it.courier||'';
-    document.getElementById('iStation').value=it.station||'';
+function applyModalMode(){
+  const g=function(id){ return document.getElementById(id); };
+  const send=modalMode==='send';
+  g('recvFields').style.display=send?'none':'block';
+  g('sendFields').style.display=send?'block':'none';
+  g('lblCode').textContent=send?'寄件码':'取件码';
+  g('codeHint').style.display=send?'none':'block';
+  g('iCode').placeholder=send?'例如：10356987':'例如：307-1-1009';
+}
+
+function openModal(id,mode){
+  modalMode=(mode==='send'||mode==='recv')?mode:page;
+  editId=id||null;
+  applyModalMode();
+  const g=function(x){ return document.getElementById(x); };
+  if(modalMode==='send'){
+    const it=editId?sends.find(i=>i.id===editId):null;
+    if(editId&&!it)return;
+    g('mTitle').textContent=editId?'编辑寄件码':'添加寄件码';
+    g('iCode').value=it?it.code:'';
+    g('iPlace').value=it?(it.place||''):'';
   }else{
-    document.getElementById('mTitle').textContent='添加快递';
-    document.getElementById('iCode').value='';curC='';document.getElementById('iStation').value='';
+    renderCrpRow(); renderStPick();
+    const it=editId?items.find(i=>i.id===editId):null;
+    if(editId&&!it)return;
+    g('mTitle').textContent=editId?'编辑快递':'添加快递';
+    g('iCode').value=it?it.code:'';
+    curC=it?(it.courier||''):'';
+    g('iStation').value=it?(it.station||''):'';
+    renderCrpRow();
   }
-  renderCrpRow();
-  document.getElementById('modal').classList.add('show');
-  if(!editId)setTimeout(()=>document.getElementById('iCode').focus(),260);
+  g('modal').classList.add('show');
+  if(!editId)setTimeout(function(){ g('iCode').focus(); },260);
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
 
 function saveItem(){
   const raw=(document.getElementById('iCode').value||'').trim();
+  if(!raw)return toast(modalMode==='send'?'请输入寄件码':'请输入取件码');
+  if(modalMode==='send') return saveSendItem(raw);
   const station=document.getElementById('iStation').value.trim();
-  if(!raw)return toast('请输入取件码');
 
   if(editId){
     const it=items.find(i=>i.id===editId);
@@ -639,6 +707,26 @@ function saveItem(){
   const news=collectNewStations(picked);
   if(news.length && !station){ confirmStations(news,doSave); return; }
   doSave();
+}
+
+/* 寄件码保存 */
+function saveSendItem(raw){
+  const place=(document.getElementById('iPlace').value||'').trim();
+  if(editId){
+    const it=sends.find(i=>i.id===editId);
+    if(it){ it.code=normalizeCode(raw)||raw; it.place=place; }
+    saveSends(); closeModal(); renderCards(); toast('已更新');
+    return;
+  }
+  const single=parseSend(raw)[0]||null;
+  sends.unshift({
+    id:newId(), ts:Date.now(),
+    code:single?single.code:(normalizeCode(raw)||raw),
+    place:place||(single?single.place:''),
+    time:new Date().toLocaleString('zh-CN'),
+    pickedUp:false
+  });
+  saveSends(); closeModal(); renderCards(); toast('已添加寄件码');
 }
 
 function togglePicked(id){
@@ -698,15 +786,9 @@ function copyCode(c){
   }).catch(function(){ toast('复制失败，请长按选中'); });
 }
 
-function cleanupPicked(){
-  const n=items.filter(i=>i.pickedUp).length;
-  if(!n)return toast('没有已取快递');
-  askConfirm('将永久删除 <b>'+n+'</b> 条已取记录，无法恢复。',function(){
-    items=items.filter(i=>!i.pickedUp);save();closeStats();renderCards();toast('已清理 '+n+' 条');
-  },'清理');
-}
-
 function renderCards(){
+  const anim=pageAnim; pageAnim=false;
+  if(page==='send'){ renderSendCards(anim); return; }
   let f=items;
   if(curTab!=='全部') f=f.filter(i=>i.station===curTab);
   /* 排序：未取优先，同状态下新的在前 */
@@ -732,8 +814,48 @@ function renderCards(){
     /* 用户可控字段（code/station/courier）一律转义；onclick 中的码值用 JSON.stringify，
        否则含引号的码会截断内联脚本，导致复制功能失效 */
     const codeJs=JSON.stringify(String(i.code==null?'':i.code));
-    return `<div class="cd${i.pickedUp?' picked':''}" style="--corp:${color};animation-delay:${Math.min(n,12)*20}ms"><div class="cd-hd"><span class="cd-corp"><span class="badge" style="--c:${color}">${esc(i.courier||'快递')}</span><span class="loc">📍 ${esc(i.station||'未指定驿站')}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="copyCode(${esc(codeJs)})">${esc(i.code)}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
+    return `<div class="cd${i.pickedUp?' picked':''}" style="--corp:${color};${anim?'animation-delay:'+Math.min(n,8)*16+'ms':'animation:none'}"><div class="cd-hd"><span class="cd-corp"><span class="badge" style="--c:${color}">${esc(i.courier||'快递')}</span><span class="loc">📍 ${esc(i.station||'未指定驿站')}</span></span><span class="cd-sta">${timeLabel(i)}</span></div><div class="cd-code${i.pickedUp?' picked':''}" onclick="copyCode(${esc(codeJs)})">${esc(i.code)}</div><div class="cd-ft">${i.pickedUp?`<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important;box-shadow:0 2px 8px rgba(142,142,147,.25)!important" onclick="event.stopPropagation();togglePicked(${i.id})">取消已取</button>`:`<button class="btn-pk" onclick="event.stopPropagation();togglePicked(${i.id})">已取</button>`}<button onclick="event.stopPropagation();openModal(${i.id})">编辑</button><button class="del" onclick="event.stopPropagation();deleteItem(${i.id})">删除</button></div></div>`;
   }).join('');
+}
+
+/* 寄件码列表（快递柜 + 寄件码） */
+function renderSendCards(anim){
+  const f=sends.slice().sort(function(a,b){
+    if(a.pickedUp!==b.pickedUp) return a.pickedUp?1:-1;
+    return (b.ts||b.id)-(a.ts||a.id);
+  });
+  const el=document.getElementById('cardList');
+  if(!f.length){
+    el.innerHTML='<div class="empty"><div class="empty-ring">📤</div><div class="empty-t">还没有寄件码</div><div class="empty-s">寄件时点📷识别，<br>寄件码与快递柜名称会自动填入</div></div>';
+    return;
+  }
+  el.innerHTML=f.map(function(i,n){
+    const codeJs=JSON.stringify(String(i.code==null?'':i.code));
+    const delay=anim?'animation-delay:'+Math.min(n,8)*16+'ms':'animation:none';
+    return '<div class="cd'+(i.pickedUp?' picked':'')+'" style="--corp:var(--accent);'+delay+'">'
+      +'<div class="cd-hd"><span class="cd-corp"><span class="badge" style="--c:var(--accent)">寄件</span>'
+      +'<span class="loc">📍 '+esc(i.place||'未指定快递柜')+'</span></span>'
+      +'<span class="cd-sta">'+timeLabel(i)+'</span></div>'
+      +'<div class="cd-code'+(i.pickedUp?' picked':'')+'" onclick="copyCode('+codeJs+')">'+esc(i.code)+'</div>'
+      +'<div class="cd-ft">'
+      +(i.pickedUp
+        ? '<button class="btn-pk" style="background:linear-gradient(135deg,#8E8E93,#7A7A81)!important" onclick="event.stopPropagation();toggleSent('+i.id+')">取消已寄</button>'
+        : '<button class="btn-pk" onclick="event.stopPropagation();toggleSent('+i.id+')">已寄</button>')
+      +'<button onclick="event.stopPropagation();openModal('+i.id+',\'send\')">编辑</button>'
+      +'<button class="del" onclick="event.stopPropagation();deleteSend('+i.id+')">删除</button>'
+      +'</div></div>';
+  }).join('');
+}
+function toggleSent(id){
+  const it=sends.find(i=>i.id===id); if(!it)return;
+  it.pickedUp=!it.pickedUp;
+  saveSends(); renderCards(); toast(it.pickedUp?'已标记寄出':'已取消');
+}
+function deleteSend(id){
+  const it=sends.find(i=>i.id===id); if(!it)return;
+  askConfirm('确定删除寄件码 <b>'+esc(it.code)+'</b> 吗？此操作不可撤销。',function(){
+    sends=sends.filter(i=>i.id!==id); saveSends(); renderCards(); toast('已删除');
+  },'删除');
 }
 
 /* 全角转半角：Tesseract 在 chi_sim 模式下偶尔把数字/字母识别成全角，
@@ -1342,7 +1464,7 @@ async function preprocess(file){
   finally{ if(url){ try{URL.revokeObjectURL(url);}catch(e){} } }
 }
 
-async function handleFile(e){ const f=e.target.files[0]; if(f) await processImage(f); e.target.value=''; }
+async function handleFile(e){ const f=e.target.files[0]; if(f) await processImage(f,page); e.target.value=''; }
 
 let ocrPhase='识别中';
 let workerReady=null, isOcrRunning=false;
@@ -1363,6 +1485,87 @@ function buildWorker(stEl){
 }
 
 /* 空闲预热：提前下载语言包并初始化，点识别时不用干等 */
+/* ============================================================
+   寄件码识别：只提取两样 ——
+   ① 寄件码（如 10356987）② 快递柜 / 快递站名称（如 财经学院6栋楼下丰巢柜）
+   ============================================================ */
+/* 柜机品牌 OCR 纠错：截图里「丰嘛柜」实为「丰巢柜」（巢 被中文引擎认成 嘛）。
+   只在「与品牌词编辑距离 ≤1 且紧邻 柜/站/点/箱 或位于末尾」时才纠，避免误伤普通词。 */
+const BRAND_FIX=['丰巢','菜鸟','兔喜','中通','圆通','韵达','申通','极兔','顺丰','京东','德邦','妈妈驿站','熊猫快收'];
+function repairBrand(s){
+  if(!s)return s;
+  let out=String(s);
+  for(let k=0;k<BRAND_FIX.length;k++){
+    const b=BRAND_FIX[k];
+    for(let i=0;i+b.length<=out.length;i++){
+      const w=out.substr(i,b.length);
+      if(w===b)continue;
+      if(levenshtein(w,b)>1)continue;
+      /* 只要求「后面紧邻 柜/站/点/箱 或已是结尾」——
+         这是柜机/驿站语境的充分条件；再加前置词要求会把「楼下丰嘛柜」误拦 */
+      const next=out.charAt(i+b.length);
+      if(!/[柜站点箱]/.test(next)&&next!=='')continue;
+      out=out.slice(0,i)+b+out.slice(i+b.length);
+      i+=b.length-1;
+    }
+  }
+  return out;
+}
+
+function parseSend(text){
+  if(!text)return[];
+  const rawT=String(text||'');
+  const full=cleanCJK(glueSplitCodes(text));
+
+  /* ① 快递柜 /驿站 名称（在保留换行的原文上取，避免 cleanCJK 跨行合并） */
+  let place='';
+  const placePats=[
+    /(?:附近)?(?:快递柜|自提柜|丰巢柜|寄件柜|存件柜|快递柜名)\s*[:：]\s*([^\n，。；、：:]{4,32})/,
+    /(?:快递柜|自提柜|丰巢柜|寄件柜)\s*[:：]?\s*([^\n，。；、：:]{4,32}?(?:丰巢柜|快递柜|驿站|柜))/,
+    /到\s*([^\n，。；、：:]{4,32}?(?:丰巢柜|快递柜|驿站|柜))/,
+    /([^\n，。；、：:]{4,32}丰巢柜)/,
+    /([^\n，。；、：:]{4,32}快递柜)/
+  ];
+  const grabPlace=function(src){
+    for(const re of placePats){
+      const m=re.exec(src);
+      if(m&&m[1]){
+        const s=m[1].split(/[:：\r\n]/)[0].replace(/^[\s，。、\-—]+/,'').replace(/[\s，。、]+$/,'');
+        if(s.length>=4&&s.length<=32&&!/^(请输入|点击|扫描|复制|附近)/.test(s)) return s;
+      }
+    }
+    return '';
+  };
+  place=repairBrand(grabPlace(rawT)||grabPlace(full));
+
+  /* ② 寄件码：优先关键词；否则在有柜名语境下取 7~9 位纯数字 */
+  let code='';
+  const reKey=/(?:寄件码|寄件编号|寄件号|寄递码|取件码|取货码)\s*[:：]?\s*([A-Za-z0-9][A-Za-z0-9\-]{5,13})/;
+  const mk=reKey.exec(full);
+  if(mk) code=mk[1];
+  if(!code&&place){
+    const noPhone=full.replace(/1[3-9][0-9]{10}/g,'');
+    const m8=/(?:^|[^0-9])([0-9]{7,9})(?![0-9])/.exec(noPhone);
+    if(m8) code=m8[1];
+  }
+  if(!code)return[];
+  const nc=normalizeCode(code);
+  return [{code:nc||code, place:place}];
+}
+
+/* 寄件码版面择优：优先 6~10 位数字码 */
+function codeScoreSend(codes,conf){
+  if(!codes||!codes.length)return -1;
+  const c=codes[0].code||'';
+  const d=c.replace(/[^0-9]/g,'').length;
+  return (d>=6&&d<=10?100000:0)+Math.min(c.length,14)*10+Math.min(conf||0,100)/100;
+}
+function passGoodSend(codes){
+  if(!codes||!codes.length)return false;
+  const d=codes[0].code.replace(/[^0-9]/g,'').length;
+  return d>=6&&d<=10;
+}
+
 /* 识别引擎脚本：本地文件优先 → 多 CDN 兜底，加载后校验 Tesseract 是否真可用。
    任一来源失败或“加载了但没暴露 Tesseract”都会自动换下一个，全部失败才返回 false。 */
 const TESS_SRC=[
@@ -1505,7 +1708,7 @@ function passGood(codes){
 }
 
 /* 主流程：灰度标准版面 → 二值增强 → 稀疏版面；命中即可信结果就收工 */
-let lastOcrFile=null, ocrAbort=false;
+let lastOcrFile=null, lastOcrMode='recv', ocrAbort=false;
 
 /* 引擎脚本加载失败时的可操作提示（不静默） */
 function ocrEngineFail(stEl){
@@ -1519,17 +1722,22 @@ function ocrEngineFail(stEl){
   btn.className='ocr-cancel';
   btn.textContent='重试加载';
   btn.style.marginTop='14px';
-  btn.onclick=function(){ tessLoadP=null; if(lastOcrFile) processImage(lastOcrFile); else closeOCR(); };
+  btn.onclick=function(){ tessLoadP=null; if(lastOcrFile) processImage(lastOcrFile,lastOcrMode); else closeOCR(); };
   wrap.appendChild(t); wrap.appendChild(btn);
   stEl.appendChild(wrap);
 }
 function closeOCR(){ const el=document.getElementById('ocrLoad'); if(el)el.classList.remove('show'); isOcrRunning=false; }
 
-async function processImage(imageFile){
+async function processImage(imageFile,mode){
   if(isOcrRunning)return;
   isOcrRunning=true;
   ocrAbort=false;
+  mode=(mode==='send'||mode==='recv')?mode:page;
   lastOcrFile=imageFile;
+  lastOcrMode=mode;
+  const parse=(mode==='send')?parseSend:parseText;
+  const scorer=(mode==='send')?codeScoreSend:codeScore;
+  const isGood=(mode==='send')?passGoodSend:passGood;
   var loadEl=document.getElementById('ocrLoad'), stEl=document.getElementById('ocrSt');
   loadEl.classList.add('show');
   stEl.textContent='正在加载识别引擎...';
@@ -1559,21 +1767,21 @@ async function processImage(imageFile){
       const text=(data&&data.text)||'';
       const conf=(data&&typeof data.confidence==='number')?data.confidence:0;
       lastText=text;
-      const found=parseText(text);
-      const sc=codeScore(found,conf);
+      const found=parse(text);
+      const sc=scorer(found,conf);
       if(sc>bestScore){ bestScore=sc; bestCodes=found; bestText=text; bestWords=ocrWords(data); }
       /* 早停收紧：只有「带连字符」且**已含字母**才立即收工。
          若结果是纯数字码，中文引擎很可能刚吞掉首字母（A→及）——再跑一版（最多2版）
          找回字母的机会更大，找不到再交给 refineCode 兜底。 */
-      if(passGood(found)){
-        if(hasLetter(found[0].code) || pi>=1) break;
+      if(isGood(found)){
+        if(mode==='send' || hasLetter(found[0].code) || pi>=1) break;
       }
     }
     if(bestCodes.length){
       const refined=await refineCode(bestCodes[0].code,bestWords,pp.canvas);
       if(refined&&refined!==bestCodes[0].code) bestCodes[0].code=refined;
     }
-    showOcrResults(bestCodes,bestText||lastText);
+    showOcrResults(bestCodes,bestText||lastText,mode);
   }catch(err){
     if(ocrAbort){ ocrAbort=false; return; }
     stEl.textContent='';
@@ -1585,7 +1793,7 @@ async function processImage(imageFile){
     msg.lastChild.textContent=String(err&&err.message?err.message:err);
     const rb=document.createElement('button');
     rb.className='ocr-cancel'; rb.style.marginTop='14px'; rb.textContent='重试';
-    rb.onclick=function(){ if(lastOcrFile) processImage(lastOcrFile); };
+    rb.onclick=function(){ if(lastOcrFile) processImage(lastOcrFile,lastOcrMode); };
     box.appendChild(msg); box.appendChild(rb);
     stEl.appendChild(box);
   }finally{
@@ -1649,57 +1857,68 @@ function closeStationDialog(){
   if(typeof cb==='function') cb();
 }
 
-function showOcrResults(codes,raw){
+function showOcrResults(codes,raw,mode){
   const loadEl=document.getElementById('ocrLoad');
   if(loadEl)loadEl.classList.remove('show');
   raw=raw||'';
-  /* 先确认新驿站是否入库，再展示取件码结果 */
-  const finish=()=>renderOcrPanel(codes,raw);
-  if(codes.length){
+  const finish=()=>renderOcrPanel(codes,raw,mode);
+  if(mode!=='send'&&codes.length){
     const news=collectNewStations(codes);
     if(news.length){ confirmStations(news,finish); return; }
   }
   finish();
 }
 
-function renderOcrPanel(codes,raw){
-  /* 未识别到：给出可排查的原文与替代路径 */
+function renderOcrPanel(codes,raw,mode){
+  mode=(mode==='send'||mode==='recv')?mode:page;
+  const send=mode==='send';
   if(!codes.length){
-    let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>未识别到取件码</h3><span class="ocr-done" onclick="document.getElementById(\'mso\').remove()">关闭</span></div>';
-    h+='<div style="font-size:13.5px;color:var(--tx-3);line-height:1.55;margin-bottom:12px;letter-spacing:-.01em">建议截图时只保留取件码区域，或直接粘贴短信原文（识别率最高）。</div>';
+    let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>'+(send?'未识别到寄件码':'未识别到取件码')+'</h3><span class="ocr-done" onclick="document.getElementById(\'mso\').remove()">关闭</span></div>';
+    h+='<div style="font-size:13.5px;color:var(--tx-3);line-height:1.55;margin-bottom:12px;letter-spacing:-.01em">'
+      +(send?'建议截图保留「寄件码」与快递柜名称区域，或直接粘贴原文（识别率最高）。'
+           :'建议截图时只保留取件码区域，或直接粘贴短信原文（识别率最高）。')+'</div>';
     if(raw.trim()){
       h+='<div class="raw-box" id="rawBox">'+esc(raw.trim())+'</div>';
       h+='<button class="set-btn ghost" onclick="copyRaw()">复制识别原文</button>';
-      h+='<button class="set-btn ghost" style="margin-bottom:14px" onclick="document.getElementById(\'mso\').remove();openModal();document.getElementById(\'iCode\').value=document.getElementById(\'rawBox\').textContent;">填入原文再解析</button>';
+      h+='<button class="set-btn ghost" style="margin-bottom:14px" onclick="document.getElementById(\'mso\').remove();openModal(null,\''+mode+'\');document.getElementById(\'iCode\').value=document.getElementById(\'rawBox\').textContent;">填入原文再解析</button>';
     }
-    h+='<button class="set-btn solid" style="margin-top:0" onclick="document.getElementById(\'mso\').remove();openModal()">手动添加取件码</button>';
+    h+='<button class="set-btn solid" style="margin-top:0" onclick="document.getElementById(\'mso\').remove();openModal(null,\''+mode+'\')">'+(send?'手动添加寄件码':'手动添加取件码')+'</button>';
     h+='</div>';
     showSheet(h);
     return;
   }
 
-  /* 单个：直接带入添加弹窗 */
   if(codes.length===1){
     const c=codes[0];
-    openModal();
+    openModal(null,mode);
     setTimeout(()=>{
       document.getElementById('iCode').value=c.code;
-      curC=c.courier||'';
-      document.getElementById('iStation').value=c.station||'';
-      renderCrpRow();
+      if(send){ document.getElementById('iPlace').value=c.place||''; }
+      else{
+        curC=c.courier||'';
+        document.getElementById('iStation').value=c.station||'';
+        renderCrpRow();
+      }
     },60);
     return;
   }
 
-  /* 多个：列表 + 一键全加 */
-  let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>识别到 '+codes.length+' 个取件码</h3><span class="ocr-done" onclick="document.getElementById(\'mso\').remove()">完成</span></div>';
+  let h='<div class="ocr-sheet"><div class="ocr-hd"><h3>识别到 '+codes.length+' 个'+(send?'寄件码':'取件码')+'</h3><span class="ocr-done" onclick="document.getElementById(\'mso\').remove()">完成</span></div>';
   codes.forEach(c=>{
-    const info=[c.courier,c.station].filter(Boolean).join(' · ');
-    const args=[c.code,c.courier||'',c.station||''].map(x=>JSON.stringify(String(x==null?'':x))).join(',');
-h+=`<div class="ocr-item"><div><div class="ocr-code">${esc(c.code)}</div><div class="ocr-meta">${esc(info||'未识别驿站')}</div></div><button class="ocr-add" onclick="qAdd(${esc(args)});this.textContent='已添加';this.classList.add('done');this.disabled=true;">添加</button></div>`;
+    const info=send?(c.place||'未识别快递柜'):([c.courier,c.station].filter(Boolean).join(' · ')||'未识别驿站');
+    const args=send
+      ?[c.code,c.place||''].map(x=>JSON.stringify(String(x==null?'':x))).join(',')
+      :[c.code,c.courier||'',c.station||''].map(x=>JSON.stringify(String(x==null?'':x))).join(',');
+    const fn=send?'qAddSend':'qAdd';
+    h+=`<div class="ocr-item"><div><div class="ocr-code">${esc(c.code)}</div><div class="ocr-meta">${esc(info)}</div></div><button class="ocr-add" onclick="${fn}(${esc(args)});this.textContent='已添加';this.classList.add('done');this.disabled=true;">添加</button></div>`;
   });
-  const all=JSON.stringify(codes.map(c=>({c:String(c.code||''),r:c.courier||'',s:c.station||''})));
-  h+='<button class="set-btn solid" style="margin-top:12px" onclick="qAddAll('+esc(all)+')">全部添加（'+codes.length+'）</button>';
+  if(send){
+    const all=JSON.stringify(codes.map(c=>({c:String(c.code||''),p:c.place||''})));
+    h+='<button class="set-btn solid" style="margin-top:12px" onclick="qAddSendAll('+esc(all)+')">全部添加（'+codes.length+'）</button>';
+  }else{
+    const all=JSON.stringify(codes.map(c=>({c:String(c.code||''),r:c.courier||'',s:c.station||''})));
+    h+='<button class="set-btn solid" style="margin-top:12px" onclick="qAddAll('+esc(all)+')">全部添加（'+codes.length+'）</button>';
+  }
   if(raw.trim()){
     h+='<button class="set-btn ghost" style="margin-top:10px;margin-bottom:8px" onclick="toggleRaw(this)">查看识别原文</button>';
     h+='<div class="raw-box" style="display:none">'+esc(raw.trim())+'</div>';
@@ -1728,6 +1947,21 @@ function qAdd(code,cr,st){
   save();renderCards();toast('已添加 '+code);
 }
 
+function qAddSend(code,place){
+  sends.unshift({id:newId(),ts:Date.now(),code:String(code||''),place:String(place||''),time:new Date().toLocaleString('zh-CN'),pickedUp:false});
+  saveSends(); renderCards(); toast('已添加寄件码 '+(code||''));
+}
+function qAddSendAll(list){
+  if(!list||!list.length)return;
+  for(let i=list.length-1;i>=0;i--){
+    const c=list[i];
+    sends.unshift({id:newId(),ts:Date.now(),code:String(c.c||''),place:String(c.p||''),time:new Date().toLocaleString('zh-CN'),pickedUp:false});
+  }
+  saveSends(); renderCards();
+  const ov=document.getElementById('mso'); if(ov)ov.remove();
+  toast('已添加 '+list.length+' 个寄件码');
+}
+
 function qAddAll(list){
   if(!list||!list.length)return;
   for(let i=list.length-1;i>=0;i--){
@@ -1745,16 +1979,6 @@ function cancelOCR(){
   toast('已取消');
 }
 
-function openStats(){
-  const total=items.length,picked=items.filter(i=>i.pickedUp).length,active=total-picked;
-  const today=new Date().toDateString(),tc=items.filter(i=>new Date(i.ts||i.id).toDateString()===today).length;
-  const ss={};items.forEach(i=>{if(i.station)ss[i.station]=(ss[i.station]||0)+1;});
-  const top=Object.entries(ss).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('statsCt').innerHTML=`<div class="sgrid"><div class="sc"><div class="n">${total}</div><div class="l">总快递数</div></div><div class="sc"><div class="n">${active}</div><div class="l">待取快递</div></div><div class="sc"><div class="n">${picked}</div><div class="l">已取快递</div></div><div class="sc"><div class="n">${tc}</div><div class="l">今日新增</div></div></div>${top.length?`<div class="sec-t">驿站包裹排行</div><div class="rk">${top.map(n=>`<div class="rk-row"><span class="nm">📍 ${esc(n[0])}</span><span class="ct">${n[1]} 件</span></div>`).join('')}</div>`:''}`;
-  document.getElementById('statsMo').classList.add('show');
-}
-function closeStats(){document.getElementById('statsMo').classList.remove('show');}
-
 function openSettings(){
   document.getElementById('iStas').value=stations.join('\n');
   document.getElementById('setMo').classList.add('show');
@@ -1771,7 +1995,7 @@ function saveSettings(){
 }
 
 function exportData(){
-  const data=JSON.stringify({items,stations,version:2});
+  const data=JSON.stringify({items,stations,sends:sends,version:3});
   copyText(data).then(function(){ toast('数据已复制'); }).catch(function(){ toast('复制失败'); });
 }
 function importData(){
@@ -1790,6 +2014,7 @@ function doImport(data){
   try{
     items=Array.isArray(data.items)?data.items:[];
     save();
+    if(Array.isArray(data.sends)){ sends=data.sends; saveSends(); }
     if(data.stations&&Array.isArray(data.stations)){ stations=data.stations; saveStas(); }
     if(curTab!=='全部' && stations.indexOf(curTab)<0) curTab='全部';
     renderCards();closeSettings();toast('导入成功！共'+items.length+'条');
@@ -1823,14 +2048,13 @@ renderCards();
     m.addEventListener('click',function(e){
       if(e.target!==m||!m.id)return;
       if(m.id==='modal')closeModal();
-      else if(m.id==='statsMo')closeStats();
       else if(m.id==='setMo')closeSettings();
       else if(m.id==='confirmMo')closeConfirm();
     });
   });
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape'){
-      closeConfirm();closeModal();closeStats();closeSettings();
+      closeConfirm();closeModal();closeSettings();
       const ov=document.getElementById('mso'); if(ov)ov.remove();
     }
   });
