@@ -153,6 +153,19 @@ body{
   color:#fff; border-color:transparent; box-shadow:0 4px 14px rgba(255,143,176,.34);
 }
 
+/* ---- 一键清除已取 ---- */
+.clr-row{ display:flex; justify-content:flex-end; padding:0 var(--s4) 8px; }
+.clr-btn{
+  display:inline-flex; align-items:center; gap:5px;
+  border:1.5px dashed var(--hairline); background:var(--surface);
+  color:var(--tx-2); font-family:inherit; font-size:12.5px; font-weight:700;
+  padding:7px 14px; border-radius:var(--r-full); cursor:pointer;
+  touch-action:manipulation; min-height:32px; letter-spacing:-.01em;
+  transition:transform var(--t-1) var(--ease-out), background var(--t-1) var(--ease-out), color var(--t-1) var(--ease-out), border-color var(--t-1) var(--ease-out);
+}
+.clr-btn:active{ transform:scale(.94); background:var(--danger-soft); color:var(--danger); border-color:rgba(255,122,133,.35); }
+.clr-btn b{ color:var(--accent); font-feature-settings:"tnum"; }
+
 /* ---- 卡片 ---- */
 .cl{ padding:0 var(--s4); }
 .cd{
@@ -489,7 +502,7 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
 
 
 <div class="hdr">
-  <span class="ver" title="版本号，用于确认是否已更新">v1.2</span>
+  <span class="ver" title="版本号，用于确认是否已更新">v1.3</span>
   <img src="header.png" alt="" onerror="this.style.display='none'">
   <div class="hdr-t">
     <h1><img src="bear1.png" alt=""><span>熊熊驿站</span><img src="bear2.png" alt=""></h1>
@@ -507,6 +520,9 @@ textarea.code-input{ min-height:64px; resize:vertical; line-height:1.45; }
     <button class="ocr-cancel" onclick="cancelOCR()">取消</button>
   </div>
   <div class="tabs" id="staTabs"></div>
+  <div class="clr-row" id="clrRow" style="display:none">
+    <button class="clr-btn" id="clrBtn" onclick="clearPicked()">🧹 清除已取</button>
+  </div>
   <div class="cl" id="cardList"></div>
 </div>
 
@@ -715,6 +731,28 @@ function saveItem(){
   doSave();
 }
 
+/* 一键清除「已取快递」：只删已取的，待取的不受影响 */
+function clearPicked(){
+  const n=items.filter(function(i){ return i.pickedUp; }).length;
+  if(!n) return toast('没有已取快递');
+  askConfirm('将永久删除 <b>'+n+'</b> 条已取记录，无法恢复。<br>待取的快递不受影响。',function(){
+    items=items.filter(function(i){ return !i.pickedUp; });
+    save(); renderCards(); toast('已清除 '+n+' 条');
+  },'清除');
+}
+
+/* 按钮只在「取件页 且有已取记录」时出现，并显示条数 */
+function syncClearBar(){
+  const row=document.getElementById('clrRow');
+  if(!row) return;
+  const n=items.filter(function(i){ return i.pickedUp; }).length;
+  const show=(page==='recv'&&n>0);
+  row.style.display=show?'flex':'none';
+  if(!show) return;
+  const btn=document.getElementById('clrBtn');
+  if(btn) btn.innerHTML='🧹 清除已取 <b>'+n+'</b> 件';
+}
+
 /* 寄件码保存 */
 function saveSendItem(raw){
   const place=(document.getElementById('iPlace').value||'').trim();
@@ -794,6 +832,7 @@ function copyCode(c){
 
 function renderCards(){
   const anim=pageAnim; pageAnim=false;
+  syncClearBar();
   if(page==='send'){ renderSendCards(anim); return; }
   let f=items;
   if(curTab!=='全部') f=f.filter(i=>i.station===curTab);
